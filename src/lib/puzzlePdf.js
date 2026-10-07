@@ -22,7 +22,7 @@ function drawRegistrationMark(context, x, y) {
   context.stroke();
 }
 
-export async function downloadPuzzlePdf(puzzle) {
+export async function createPuzzlePdf(puzzle) {
   const bitmap = await loadBitmap(puzzle.imageBlob);
   const aspect = bitmap.width / bitmap.height;
   const landscape = aspect > 1.08;
@@ -80,26 +80,36 @@ export async function downloadPuzzlePdf(puzzle) {
       context.restore();
 
       context.save();
-      context.translate(originX - puzzle.geometry.boardX * 0 - cropX * scalePx, originY - cropY * scalePx);
+      context.beginPath();
+      context.rect(originX, originY, coreWidthPx + OVERLAP * scalePx, coreHeightPx + OVERLAP * scalePx);
+      context.clip();
+      context.translate(originX - cropX * scalePx, originY - cropY * scalePx);
       context.scale(pathScale, pathScale);
       context.strokeStyle = '#173a3d';
       context.lineWidth = 1.5 / pathScale;
       context.lineJoin = 'round';
       context.lineCap = 'round';
       for (const piece of puzzle.geometry.pieces) {
+        context.save();
+        context.translate(piece.col * puzzle.geometry.cellWidth, piece.row * puzzle.geometry.cellHeight);
         context.stroke(new Path2D(piece.path));
+        context.restore();
       }
       context.restore();
 
       context.save();
       context.strokeStyle = '#173a3d';
       context.lineWidth = 1.5;
-      const seamX = originX + (col > 0 ? OVERLAP * scalePx : 0);
-      const seamY = originY + (row > 0 ? OVERLAP * scalePx : 0);
-      if (col > 0) drawRegistrationMark(context, seamX, originY + coreHeightPx * 0.5);
-      if (row > 0) drawRegistrationMark(context, originX + coreWidthPx * 0.5, seamY);
-      if (col < columns - 1) drawRegistrationMark(context, originX + coreWidthPx, originY + coreHeightPx * 0.5);
-      if (row < rows - 1) drawRegistrationMark(context, originX + coreWidthPx * 0.5, originY + coreHeightPx);
+      const incomingX = originX + (coreX - cropX) * scalePx;
+      const incomingY = originY + (coreY - cropY) * scalePx;
+      const outgoingX = originX + ((col + 1) * tileWidth - cropX) * scalePx;
+      const outgoingY = originY + ((row + 1) * tileHeight - cropY) * scalePx;
+      const coreCenterX = originX + (coreX + tileWidth * 0.5 - cropX) * scalePx;
+      const coreCenterY = originY + (coreY + tileHeight * 0.5 - cropY) * scalePx;
+      if (col > 0) drawRegistrationMark(context, incomingX, coreCenterY);
+      if (row > 0) drawRegistrationMark(context, coreCenterX, incomingY);
+      if (col < columns - 1) drawRegistrationMark(context, outgoingX, coreCenterY);
+      if (row < rows - 1) drawRegistrationMark(context, coreCenterX, outgoingY);
       context.restore();
 
       const page = pdf.addPage([pageSize.width, pageSize.height]);
@@ -111,11 +121,5 @@ export async function downloadPuzzlePdf(puzzle) {
   }
   bitmap.close();
   const bytes = await pdf.save();
-  const blob = new Blob([bytes], { type: 'application/pdf' });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = `puzlea-${puzzle.level}-piezas.pdf`;
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return new Blob([bytes], { type: 'application/pdf' });
 }

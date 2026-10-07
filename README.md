@@ -4,11 +4,11 @@ Convierte tus imágenes en rompecabezas y juega a tu ritmo. Puzlea está pensada
 
 ## Qué puedes hacer
 
-- Crear rompecabezas de 24, 48, 96 o 192 piezas con una imagen JPG, PNG o WebP de hasta 20 MB.
+- Crear rompecabezas de 24, 48, 96 o 192 piezas con una imagen JPG, PNG o WebP de hasta 20 MB y 40 megapíxeles.
 - Elegir orientación fija, orientación inicial aleatoria o giro manual durante la partida.
 - Consultar la imagen original, jugar con o sin cronómetro y continuar después desde tus partidas guardadas.
 - Exportar e importar un archivo `.puzlea` que conserva imagen, geometría y avance.
-- Descargar un PDF de impresión con líneas de corte y marcas de registro para unir varias hojas.
+- Revisar y descargar un PDF de impresión con líneas de corte y marcas de registro para unir varias hojas.
 - Explorar y enviar imágenes a una galería opcional. Las publicaciones quedan privadas hasta una aprobación manual.
 
 ## Empezar
@@ -29,7 +29,7 @@ npm run preview
 
 ## Guardados y privacidad
 
-Las imágenes y partidas privadas se guardan en IndexedDB del navegador. Puedes exportar un archivo `.puzlea` para conservar o mover una partida. El archivo contiene la imagen que elegiste y la geometría exacta de las piezas. Borrar los datos del sitio en el navegador también borra las partidas locales.
+Las imágenes y partidas privadas se guardan en IndexedDB del navegador. Puedes exportar un archivo `.puzlea` para conservar o mover una partida. El archivo contiene la imagen original que elegiste, una copia optimizada para jugar y la geometría exacta de las piezas. Borrar los datos del sitio en el navegador también borra las partidas locales.
 
 Compartir una imagen es opcional. Requiere una cuenta de Supabase y una acción explícita; el envío va a una cola privada y no se muestra hasta aprobarlo una persona moderadora. Sin configurar Supabase, la galería y las cuentas muestran instrucciones de conexión, mientras el juego local sigue funcionando.
 
@@ -42,7 +42,7 @@ Compartir una imagen es opcional. Requiere una cuenta de Supabase y una acción 
 
 La clave publishable puede usarse en el navegador porque las políticas RLS son la barrera de acceso. **Nunca** pongas la clave `service_role` en `.env`, en el código o en el navegador. El bucket `gallery-images` es privado; una imagen solo puede leerse cuando su envío propio o aprobado autoriza el acceso.
 
-Para revisar publicaciones, asigna el rol `puzlea_moderator` en el `app_metadata` de una cuenta mediante un entorno administrativo de confianza. No uses `user_metadata`, porque el usuario puede cambiarlo. La persona moderadora revisa las filas `pending` en Supabase y cambia su estado a `approved` o `rejected`; en ambos casos debe registrar `reviewed_at` y, cuando esté disponible, `reviewed_by`. No se aprueba contenido automáticamente.
+Para revisar publicaciones, usa Supabase Dashboard con acceso administrativo. Cambia el estado de una fila de `pending` a `approved` o `rejected`; en ambos casos registra `reviewed_at` y, cuando esté disponible, `reviewed_by`. Los clientes no pueden cambiar estados y no se aprueba contenido automáticamente.
 
 Los remitentes ven el estado de sus propios envíos. La galería solo muestra filas `approved`. Las imágenes rechazadas se conservan privadas para que una persona administradora pueda eliminarlas desde Storage después de la revisión.
 

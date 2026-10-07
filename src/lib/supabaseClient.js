@@ -23,25 +23,9 @@ export async function listApprovedPuzzles() {
   }));
 }
 
-export async function listPendingPuzzles() {
-  if (!supabase) return [];
-  const { data, error } = await supabase.from('gallery_puzzles')
-    .select('id,title,description,storage_path,created_at')
-    .eq('status', 'pending')
-    .order('created_at', { ascending: true });
-  if (error) throw error;
-  return Promise.all((data ?? []).map(async (puzzle) => {
-    const { data: signed, error: urlError } = await supabase.storage.from('gallery-images').createSignedUrl(puzzle.storage_path, 1800);
-    if (urlError) throw urlError;
-    return { ...puzzle, imageUrl: signed.signedUrl };
-  }));
-}
-
 export async function submitPuzzle({ imageBlob, title, description, userId }) {
   if (!supabase) throw new Error('Configura Supabase para compartir en la galería.');
   const path = `${userId}/${crypto.randomUUID()}.jpg`;
-  const { error: uploadError } = await supabase.storage.from('gallery-images').upload(path, imageBlob, { contentType: 'image/jpeg', upsert: false });
-  if (uploadError) throw uploadError;
   const { data, error } = await supabase.from('gallery_puzzles').insert({
     author_id: userId,
     title: title.trim(),
@@ -49,9 +33,18 @@ export async function submitPuzzle({ imageBlob, title, description, userId }) {
     storage_path: path,
     status: 'pending',
   }).select('id').single();
-  if (error) {
-    await supabase.storage.from('gallery-images').remove([path]);
-    throw error;
+  if (error) throw error;
+  const { error: uploadError } = await supabase.storage.from('gallery-images').upload(path, imageBlob, { contentType: 'image/jpeg', upsert: false });
+  if (uploadError) {
+    const { error: objectCleanupError } = await supabase.storage.from('gallery-images').remove([path]);
+    if (objectCleanupError) {
+      throw new Error('La carga falló y no se confirmó la limpieza del archivo. El envío permanece pendiente para revisión.');
+    }
+    const { error: rowCleanupError } = await supabase.from('gallery_puzzles').delete().eq('id', data.id).eq('status', 'pending');
+    if (rowCleanupError) {
+      throw new Error('La carga falló y no se pudo completar toda la limpieza. Revisa el envío pendiente en tu cuenta.');
+    }
+    throw uploadError;
   }
   return data;
 }

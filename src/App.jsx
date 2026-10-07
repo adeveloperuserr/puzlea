@@ -224,7 +224,7 @@ function Landing({ image, level, setLevel, rotationMode, setRotationMode, timerE
       <section className="saved-section" aria-labelledby="saved-title">
         <div className="section-heading"><div><h2 id="saved-title">Tus partidas</h2><p>Se guardan automáticamente en este navegador.</p></div><span className="saved-count">{savedGames.length}</span></div>
         {savedGames.length ? (
-          <div className="saved-grid">{savedGames.slice(0, 6).map((puzzle) => <SavedCard key={puzzle.id} puzzle={puzzle} onOpen={onOpenSaved} onDelete={onDeleteSaved} />)}</div>
+          <div className="saved-grid">{savedGames.map((puzzle) => <SavedCard key={puzzle.id} puzzle={puzzle} onOpen={onOpenSaved} onDelete={onDeleteSaved} />)}</div>
         ) : (
           <div className="saved-empty"><span className="empty-icon"><FolderOpen size={19} /></span><p>Aquí aparecerá tu primera partida.</p></div>
         )}
@@ -359,8 +359,10 @@ function Gallery({ user, level, setLevel, rotationMode, timerEnabled, onOpenPuzz
       onNotice('Enviado a revisión. Se mostrará en la galería si se aprueba.');
       const { data } = await supabase.from('gallery_puzzles').select('id,title,status,created_at').eq('author_id', user.id).order('created_at', { ascending: false });
       setSubmissions(data ?? []);
-    } catch {
-      setShareError('No pudimos enviar este puzle. Revisa tu conexión e inténtalo otra vez.');
+    } catch (error) {
+      setShareError(error instanceof Error && error.message.startsWith('La carga falló')
+        ? error.message
+        : 'No pudimos enviar este puzle. Revisa tu conexión e inténtalo otra vez.');
     } finally {
       setSharing(false);
     }
@@ -433,7 +435,7 @@ function Gallery({ user, level, setLevel, rotationMode, timerEnabled, onOpenPuzz
   );
 }
 
-function Game({ puzzle, imageUrl, onChange, onBack, onExport, onPrint, onNotice }) {
+function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus, onChange, onBack, onExport, onPrint, onClosePrint }) {
   const [selectedId, setSelectedId] = useState(null);
   const [showHint, setShowHint] = useState(false);
   const [showReference, setShowReference] = useState(false);
@@ -490,7 +492,7 @@ function Game({ puzzle, imageUrl, onChange, onBack, onExport, onPrint, onNotice 
           <div className="side-panel reference-panel">
             <div className="panel-heading"><div><span className="panel-kicker">Una pista</span><h2>La imagen original</h2></div><Eye size={17} className="panel-icon" /></div>
             <button className="reference-thumb" onClick={() => setShowReference(true)} aria-label="Ver imagen original">
-              <img src={imageUrl} alt="Imagen original del rompecabezas" />
+              <img src={referenceImageUrl || imageUrl} alt="Imagen original del rompecabezas" />
               <span>Ver imagen completa</span>
             </button>
             <button className={`hint-toggle${showHint ? ' active' : ''}`} onClick={() => setShowHint((value) => !value)}>
@@ -507,7 +509,10 @@ function Game({ puzzle, imageUrl, onChange, onBack, onExport, onPrint, onNotice 
             <div className="control-divider" />
             <button className="secondary-button full-width" onClick={onExport}><ArrowDownToLine size={16} /> Guardar partida</button>
             <button className="secondary-button full-width" onClick={onPrint}><Printer size={16} /> Preparar PDF imprimible</button>
-            <p className="save-note"><span className="save-dot" /> Guardado automático en este dispositivo</p>
+            <p className={`save-note${saveStatus === 'error' ? ' save-note-error' : ''}`}>
+              <span className="save-dot" />
+              {saveStatus === 'saving' ? 'Guardando en este dispositivo…' : saveStatus === 'error' ? 'No se pudo guardar el avance.' : 'Guardado automático en este dispositivo'}
+            </p>
           </div>
         </aside>
       </div>
@@ -515,8 +520,23 @@ function Game({ puzzle, imageUrl, onChange, onBack, onExport, onPrint, onNotice 
         <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowReference(false); }}>
           <section className="reference-modal" role="dialog" aria-modal="true" aria-labelledby="reference-title">
             <div className="reference-modal-head"><div><span className="panel-kicker">Pista</span><h2 id="reference-title">Imagen original</h2></div><button className="icon-button" onClick={() => setShowReference(false)} aria-label="Cerrar"><X size={18} /></button></div>
-            <img src={imageUrl} alt="Referencia completa del rompecabezas" />
+            <img src={referenceImageUrl || imageUrl} alt="Referencia completa del rompecabezas" />
             <p>Puedes volver al tablero cuando quieras.</p>
+          </section>
+        </div>
+      )}
+      {printPreviewUrl && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClosePrint(); }}>
+          <section className="pdf-preview-modal" role="dialog" aria-modal="true" aria-labelledby="pdf-preview-title">
+            <div className="reference-modal-head">
+              <div><span className="panel-kicker">Plantilla de corte</span><h2 id="pdf-preview-title">Vista previa del PDF</h2></div>
+              <div className="pdf-preview-actions">
+                <a className="secondary-button" href={printPreviewUrl} download={`puzlea-${puzzle.level}-piezas.pdf`}><ArrowDownToLine size={15} /> Descargar</a>
+                <button className="icon-button" onClick={onClosePrint} aria-label="Cerrar vista previa"><X size={18} /></button>
+              </div>
+            </div>
+            <iframe className="pdf-preview-frame" src={printPreviewUrl} title="Vista previa del rompecabezas para imprimir" />
+            <p className="pdf-preview-note">Las páginas están preparadas en tamaño carta e incluyen solapamiento y marcas de registro.</p>
           </section>
         </div>
       )}
@@ -535,8 +555,17 @@ export default function App() {
   const [fileBusy, setFileBusy] = useState(false);
   const [fileError, setFileError] = useState('');
   const [notice, setNotice] = useState('');
+  const [printPreviewUrl, setPrintPreviewUrl] = useState('');
   const [user, setUser] = useState(null);
+  const [saveStatus, setSaveStatus] = useState('saved');
+  const deletedSessionIds = useRef(new Set());
+  const latestGame = useRef(game);
+  latestGame.current = game;
   const gameImageUrl = useObjectUrl(game?.imageBlob);
+  const gameReferenceImageUrl = useObjectUrl(game?.originalImageBlob ?? game?.imageBlob);
+  useEffect(() => () => {
+    if (printPreviewUrl) URL.revokeObjectURL(printPreviewUrl);
+  }, [printPreviewUrl]);
   const handleGameChange = useCallback((next) => {
     setGame((current) => typeof next === 'function' ? next(current) : next);
   }, []);
@@ -567,15 +596,27 @@ export default function App() {
 
   useEffect(() => {
     if (!game) return undefined;
+    const snapshot = game;
+    let active = true;
+    setSaveStatus('saving');
     const timeout = window.setTimeout(async () => {
+      if (deletedSessionIds.current.has(snapshot.id)) return;
       try {
-        await savePuzzle(game);
-        setSavedGames((current) => [game, ...current.filter((item) => item.id !== game.id)].sort((a, b) => b.updatedAt - a.updatedAt));
+        await savePuzzle(snapshot);
+        if (!active || deletedSessionIds.current.has(snapshot.id) || latestGame.current?.updatedAt !== snapshot.updatedAt) return;
+        setSavedGames((current) => [snapshot, ...current.filter((item) => item.id !== snapshot.id)].sort((a, b) => b.updatedAt - a.updatedAt));
+        setSaveStatus('saved');
       } catch {
-        setNotice('No se pudo guardar el avance en este dispositivo. Puedes seguir jugando.');
+        if (active && !deletedSessionIds.current.has(snapshot.id) && latestGame.current?.updatedAt === snapshot.updatedAt) {
+          setSaveStatus('error');
+          setNotice('No se pudo guardar el avance en este dispositivo. Puedes seguir jugando.');
+        }
       }
     }, 650);
-    return () => window.clearTimeout(timeout);
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
   }, [game]);
 
   useEffect(() => {
@@ -601,12 +642,15 @@ export default function App() {
     const geometry = createPuzzle(selectedLevel, sourceImage.width, sourceImage.height, selectedRotation);
     const next = {
       id: crypto.randomUUID(),
-      formatVersion: 1,
+      formatVersion: 2,
       imageName: name || sourceImage.name,
       imageType: 'image/jpeg',
       imageWidth: sourceImage.width,
       imageHeight: sourceImage.height,
       imageBlob: sourceImage.blob,
+      originalImageBlob: sourceImage.originalBlob ?? sourceImage.blob,
+      originalImageType: sourceImage.originalType ?? sourceImage.blob.type ?? 'image/jpeg',
+      originalImageName: sourceImage.originalName ?? sourceImage.name,
       level: selectedLevel,
       rotationMode: selectedRotation,
       timerEnabled: selectedTimer,
@@ -616,6 +660,7 @@ export default function App() {
       geometry,
       updatedAt: Date.now(),
     };
+    deletedSessionIds.current.delete(next.id);
     setGame(next);
     setPage('game');
   }
@@ -631,6 +676,7 @@ export default function App() {
         throw new Error('La imagen y el tablero del archivo no coinciden.');
       }
       bitmap.close();
+      deletedSessionIds.current.delete(loaded.id);
       await savePuzzle(loaded);
       setSavedGames((current) => [loaded, ...current.filter((item) => item.id !== loaded.id)]);
       setGame(loaded);
@@ -644,7 +690,12 @@ export default function App() {
   async function openSaved(puzzle) {
     try {
       const latest = await getPuzzle(puzzle.id);
-      setGame(latest ?? puzzle);
+      if (!latest || deletedSessionIds.current.has(puzzle.id)) {
+        setSavedGames((current) => current.filter((item) => item.id !== puzzle.id));
+        setNotice('Esta partida ya no está guardada en este dispositivo.');
+        return;
+      }
+      setGame(latest);
       setPage('game');
     } catch {
       setNotice('No pudimos abrir esta partida guardada.');
@@ -652,11 +703,14 @@ export default function App() {
   }
 
   async function removeSaved(id) {
+    deletedSessionIds.current.add(id);
+    if (latestGame.current?.id === id) setGame(null);
     try {
       await deletePuzzle(id);
       setSavedGames((current) => current.filter((item) => item.id !== id));
       setNotice('Partida eliminada de este dispositivo.');
     } catch {
+      deletedSessionIds.current.delete(id);
       setNotice('No se pudo eliminar la partida.');
     }
   }
@@ -671,9 +725,10 @@ export default function App() {
   async function printGame() {
     setNotice('Preparando el PDF imprimible…');
     try {
-      const { downloadPuzzlePdf } = await import('./lib/puzzlePdf');
-      await downloadPuzzlePdf(game);
-      setNotice('PDF listo para imprimir. Las hojas incluyen marcas para unirlas.');
+      const { createPuzzlePdf } = await import('./lib/puzzlePdf');
+      const pdf = await createPuzzlePdf(game);
+      setPrintPreviewUrl(URL.createObjectURL(pdf));
+      setNotice('PDF listo para revisar e imprimir.');
     }
     catch (error) { setNotice(error.message || 'No pudimos preparar el PDF.'); }
   }
@@ -697,11 +752,14 @@ export default function App() {
         <Game
           puzzle={game}
           imageUrl={gameImageUrl}
+          referenceImageUrl={gameReferenceImageUrl}
+          printPreviewUrl={printPreviewUrl}
+          saveStatus={saveStatus}
           onChange={handleGameChange}
           onBack={() => setPage('home')}
           onExport={exportGame}
           onPrint={printGame}
-          onNotice={setNotice}
+          onClosePrint={() => setPrintPreviewUrl('')}
         />
       ) : page === 'gallery' ? (
         <Gallery user={user} level={level} setLevel={setLevel} rotationMode={rotationMode} timerEnabled={timerEnabled} onOpenPuzzle={openGalleryPuzzle} onNotice={setNotice} />

@@ -299,12 +299,19 @@ button:disabled { cursor: not-allowed; opacity: .54; }
 .control-divider { height: 1px; margin: 3px 0; background: #e9eee9; }
 .save-note { display: flex; align-items: center; gap: 7px; margin: 4px 0 0; color: #90a09b; font-size: 9px; }
 .save-dot { width: 6px; height: 6px; border-radius: 50%; background: #7ea873; }
+.save-note-error { color: #a85646; }
+.save-note-error .save-dot { background: #c96852; }
 .modal-backdrop { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: 28px; background: rgba(20, 47, 47, .62); backdrop-filter: blur(5px); }
 .reference-modal { width: min(900px, 94vw); max-height: 90vh; overflow: auto; padding: 17px; border-radius: 18px; background: #fbfcf7; box-shadow: 0 30px 90px rgba(0,0,0,.25); }
 .reference-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 0 3px 13px; }
 .reference-modal-head h2 { margin: 4px 0 0; font: 700 16px 'Segoe UI Variable',sans-serif; }
 .reference-modal > img { width: 100%; max-height: 69vh; display: block; object-fit: contain; border-radius: 11px; background: #e4ece7; }
 .reference-modal > p { margin: 11px 3px 0; color: #83948e; font-size: 10px; }
+.pdf-preview-modal { width: min(1080px, 94vw); height: min(850px, 90vh); display: flex; flex-direction: column; padding: 17px; border-radius: 18px; background: #fbfcf7; box-shadow: 0 30px 90px rgba(0,0,0,.25); }
+.pdf-preview-actions { display: flex; align-items: center; gap: 9px; }
+.pdf-preview-actions .secondary-button { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; }
+.pdf-preview-frame { flex: 1; width: 100%; min-height: 0; border: 1px solid #dce5df; border-radius: 11px; background: #e4ece7; }
+.pdf-preview-note { margin: 9px 3px 0; color: #83948e; font-size: 10px; }
 .toast { position: fixed; z-index: 5; right: 20px; bottom: 20px; max-width: 390px; display: flex; align-items: center; gap: 9px; padding: 12px 14px; border: 1px solid #c9ded0; border-radius: 12px; background: #f7fbf3; color: #537959; box-shadow: 0 8px 28px rgba(29,67,54,.14); font-size: 11px; }
 .toast button { display: grid; place-items: center; margin-left: 4px; padding: 2px; border: 0; background: transparent; color: inherit; cursor: pointer; }
 

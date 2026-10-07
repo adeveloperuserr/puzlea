@@ -49,7 +49,7 @@ La app debe funcionar sin Supabase configurado. No se despliega ni publica el si
 
 - El primer PDF se orienta a papel carta, en pulgadas convertidas a puntos, con una cuadrícula de páginas solapadas y marcas de registro.
 - La rotación manual usa incrementos de 90 grados con atajos de teclado y un control contextual.
-- La validación y carga inicial admiten imágenes PNG, JPEG y WebP, con límite de 20 MB para contener uso de memoria.
+- La validación y carga inicial admiten imágenes PNG, JPEG y WebP, con límite de 20 MB y 40 megapíxeles antes de decodificar para contener uso de memoria.
 - El modo aleatorio rota piezas en incrementos de 90 grados; las partidas importadas conservan su estado aunque el modo de rotación no coincida con una nueva partida.
 - Sin credenciales Supabase, la galería indica cómo configurar el servicio y el resto de la aplicación funciona normalmente.
 
