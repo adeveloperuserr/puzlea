@@ -43,9 +43,8 @@ button:disabled { cursor: not-allowed; opacity: .54; }
   justify-content: space-between;
   border-bottom: 1px solid rgba(23, 53, 56, .08);
 }
-.brand { display: inline-flex; align-items: center; gap: 9px; color: var(--ink); text-decoration: none; font: 800 23px/1 'Segoe UI Variable', 'Segoe UI', sans-serif; letter-spacing: -1.4px; }
-.brand-mark { width: 33px; height: 33px; border-radius: 11px; display: grid; place-items: center; background: var(--teal); color: var(--lime); transform: rotate(-4deg); }
-.brand-period { color: #87aa3b; }
+.brand { display: inline-flex; flex: 0 0 auto; align-items: center; color: var(--ink); text-decoration: none; }
+.brand-logo { display: block; width: 148px; height: auto; }
 .main-nav { display: flex; align-items: center; gap: 9px; height: 100%; }
 .nav-link { height: 100%; position: relative; padding: 0 18px; border: 0; background: none; color: #7b8d89; cursor: pointer; font-weight: 600; transition: color .18s ease; }
 .nav-link:hover, .nav-link.active { color: var(--ink); }
@@ -338,8 +337,7 @@ button:disabled { cursor: not-allowed; opacity: .54; }
 }
 @media (max-width: 600px) {
   .topbar { height: 65px; padding: 0 17px; }
-  .brand { font-size: 21px; }
-  .brand-mark { width: 30px; height: 30px; }
+  .brand-logo { width: 124px; }
   .main-nav { gap: 0; }
   .nav-link { padding: 0 10px; font-size: 11px; }
   .nav-link.active::after { left: 10px; right: 10px; }

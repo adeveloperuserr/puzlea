@@ -44,8 +44,7 @@ function formatDate(timestamp) {
 function Brand() {
   return (
     <a className="brand" href="#inicio" aria-label="Puzlea, inicio">
-      <span className="brand-mark"><Puzzle size={21} strokeWidth={2.3} /></span>
-      <span>puzlea<span className="brand-period">.</span></span>
+      <img className="brand-logo" src="/brand/puzlea-logo.png" alt="" />
     </a>
   );
 }
