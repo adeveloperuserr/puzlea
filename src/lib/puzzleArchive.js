@@ -1,8 +1,11 @@
 import JSZip from 'jszip';
 import { readSafeImageDimensions } from './image';
+import { PIECE_STYLES } from '../game/geometry';
 
-const FORMAT_VERSION = 2;
+const FORMAT_VERSION = 3;
+const PREVIOUS_FORMAT_VERSION = 2;
 const LEGACY_FORMAT_VERSION = 1;
+const SUPPORTED_FORMAT_VERSIONS = [LEGACY_FORMAT_VERSION, PREVIOUS_FORMAT_VERSION, FORMAT_VERSION];
 const MAX_ARCHIVE_BYTES = 45 * 1024 * 1024;
 const MAX_ENTRY_BYTES = 20 * 1024 * 1024;
 const MAX_MANIFEST_BYTES = 1024 * 1024;
@@ -63,8 +66,15 @@ function validatePath(path, cellWidth, cellHeight) {
 
 function validateManifest(manifest) {
   const isLegacy = manifest?.formatVersion === LEGACY_FORMAT_VERSION;
-  if (!manifest || (!isLegacy && manifest.formatVersion !== FORMAT_VERSION)) throw new Error('Esta versión de Puzlea no reconoce este archivo.');
+  const hasOriginalImage = manifest?.formatVersion >= PREVIOUS_FORMAT_VERSION;
+  const isCurrent = manifest?.formatVersion === FORMAT_VERSION;
+  if (!manifest || !SUPPORTED_FORMAT_VERSIONS.includes(manifest.formatVersion)) throw new Error('Esta versión de Puzlea no reconoce este archivo.');
   if (!LEVELS.includes(manifest.level) || !ROTATIONS.includes(manifest.rotationMode)) throw new Error('La configuración de la partida no es válida.');
+  if ((manifest.pieceStyle !== undefined && !PIECE_STYLES.includes(manifest.pieceStyle)) ||
+      (manifest.showTargetOutlines !== undefined && typeof manifest.showTargetOutlines !== 'boolean') ||
+      (isCurrent && (manifest.pieceStyle === undefined || manifest.showTargetOutlines === undefined))) {
+    throw new Error('La configuración de forma o pistas no es válida.');
+  }
   if (manifest.imageFile !== 'image.jpg' || manifest.imageType !== 'image/jpeg' ||
       !Number.isSafeInteger(manifest.imageWidth) || !Number.isSafeInteger(manifest.imageHeight) ||
       manifest.imageWidth < 1 || manifest.imageHeight < 1 || manifest.imageWidth > 3200 || manifest.imageHeight > 3200) {
@@ -74,7 +84,7 @@ function validateManifest(manifest) {
       typeof manifest.imageName !== 'string' || manifest.imageName.length > 240 || typeof manifest.timerEnabled !== 'boolean') {
     throw new Error('Los datos de la partida no son válidos.');
   }
-  if (!isLegacy) {
+  if (hasOriginalImage) {
     const extension = sourceFileExtension(manifest.originalImageType);
     if (!extension || manifest.originalImageFile !== `source-image.${extension}` ||
         typeof manifest.originalImageName !== 'string' || manifest.originalImageName.length > 240) {
@@ -284,6 +294,8 @@ export async function downloadPuzzleArchive(puzzle) {
   const manifest = {
     ...metadata,
     formatVersion: FORMAT_VERSION,
+    pieceStyle: puzzle.pieceStyle ?? 'classic',
+    showTargetOutlines: puzzle.showTargetOutlines ?? (puzzle.level <= 48),
     imageFile: 'image.jpg',
     imageType: 'image/jpeg',
     originalImageFile,
@@ -344,7 +356,8 @@ export async function readPuzzleArchive(file) {
     throw new Error('El archivo de partida está dañado o incompleto.');
   }
   const isLegacy = manifest.formatVersion === LEGACY_FORMAT_VERSION;
-  if ((isLegacy && entries.size !== 2) || (!isLegacy && entries.size !== 3)) {
+  const hasOriginalImage = manifest.formatVersion >= PREVIOUS_FORMAT_VERSION;
+  if ((isLegacy && entries.size !== 2) || (hasOriginalImage && entries.size !== 3)) {
     throw new Error('El archivo de partida contiene una estructura de versión no válida.');
   }
 
@@ -359,7 +372,7 @@ export async function readPuzzleArchive(file) {
   let originalImageBlob = imageBlob;
   let originalImageType = 'image/jpeg';
   let originalImageName = manifest.imageName;
-  if (manifest.formatVersion === FORMAT_VERSION) {
+  if (hasOriginalImage) {
     const originalEntry = entries.get(manifest.originalImageFile);
     if (!originalEntry || !/^source-image\.(jpg|png|webp)$/.test(manifest.originalImageFile)) {
       throw new Error('El archivo no contiene la imagen original de referencia.');
@@ -373,6 +386,9 @@ export async function readPuzzleArchive(file) {
   const { imageFile: _imagePath, originalImageFile: _originalPath, ...metadata } = manifest;
   return {
     ...metadata,
+    formatVersion: FORMAT_VERSION,
+    pieceStyle: manifest.pieceStyle ?? 'classic',
+    showTargetOutlines: manifest.showTargetOutlines ?? manifest.level <= 48,
     imageBlob,
     imageType: 'image/jpeg',
     originalImageBlob,

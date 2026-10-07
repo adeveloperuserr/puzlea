@@ -1,9 +1,15 @@
 export const SUPPORTED_LEVELS = [24, 48, 96, 192]
+export const PIECE_STYLES = ['classic', 'organic', 'geometric']
 export const STAGE_WIDTH = 1360
 export const STAGE_HEIGHT = 900
 
 const randomBetween = (min, max) => min + Math.random() * (max - min)
 const rounded = (value) => Number(value.toFixed(2))
+const EDGE_RANGES = {
+  classic: { width: [0.285, 0.34], depth: [0.145, 0.205] },
+  organic: { width: [0.34, 0.4], depth: [0.18, 0.23] },
+  geometric: { width: [0.28, 0.34], depth: [0.16, 0.21] },
+}
 
 function chooseGrid(pieceCount, aspectRatio) {
   const options = []
@@ -17,27 +23,28 @@ function chooseGrid(pieceCount, aspectRatio) {
   return options[0]
 }
 
-function randomEdge() {
+function randomEdge(pieceStyle) {
+  const ranges = EDGE_RANGES[pieceStyle]
   return {
     sign: Math.random() < 0.5 ? -1 : 1,
-    depth: rounded(randomBetween(0.145, 0.205)),
-    width: rounded(randomBetween(0.285, 0.34)),
+    depth: rounded(randomBetween(...ranges.depth)),
+    width: rounded(randomBetween(...ranges.width)),
   }
 }
 
-function buildEdgeTables(rows, columns) {
+function buildEdgeTables(rows, columns, pieceStyle) {
   const horizontal = Array.from({ length: rows + 1 }, () => Array(columns).fill(null))
   const vertical = Array.from({ length: columns + 1 }, () => Array(rows).fill(null))
   for (let boundary = 1; boundary < rows; boundary += 1) {
-    for (let column = 0; column < columns; column += 1) horizontal[boundary][column] = randomEdge()
+    for (let column = 0; column < columns; column += 1) horizontal[boundary][column] = randomEdge(pieceStyle)
   }
   for (let boundary = 1; boundary < columns; boundary += 1) {
-    for (let row = 0; row < rows; row += 1) vertical[boundary][row] = randomEdge()
+    for (let row = 0; row < rows; row += 1) vertical[boundary][row] = randomEdge(pieceStyle)
   }
   return { horizontal, vertical }
 }
 
-function edgeCommands(startX, startY, endX, endY, edge, cellWidth, cellHeight) {
+function edgeCommands(startX, startY, endX, endY, edge, cellWidth, cellHeight, pieceStyle) {
   if (!edge) return `L ${rounded(endX)} ${rounded(endY)}`
   const dx = endX - startX
   const dy = endY - startY
@@ -47,7 +54,6 @@ function edgeCommands(startX, startY, endX, endY, edge, cellWidth, cellHeight) {
   const normalX = -tangentY
   const normalY = tangentX
   const depth = Math.min(cellWidth, cellHeight) * edge.depth
-  const span = length * edge.width
   const center = 0.5
   const before = center - edge.width / 2
   const after = center + edge.width / 2
@@ -67,6 +73,35 @@ function edgeCommands(startX, startY, endX, endY, edge, cellWidth, cellHeight) {
   const a8 = point(after - edge.width * 0.12, sign * depth * 0.12)
   const p1 = point(after)
   const c = (p, q, r) => `C ${p[0]} ${p[1]} ${q[0]} ${q[1]} ${r[0]} ${r[1]}`
+  if (pieceStyle === 'geometric') {
+    const points = [
+      p0,
+      point(before + edge.width * 0.12, sign * depth * 0.12),
+      point(center - edge.width * 0.2, sign * depth * 0.12),
+      point(center - edge.width * 0.16, sign * depth * 0.76),
+      point(center - edge.width * 0.08, sign * depth),
+      point(center + edge.width * 0.08, sign * depth),
+      point(center + edge.width * 0.16, sign * depth * 0.76),
+      point(center + edge.width * 0.2, sign * depth * 0.12),
+      point(after - edge.width * 0.12, sign * depth * 0.12),
+      p1,
+      [rounded(endX), rounded(endY)],
+    ]
+    return points.map(([x, y]) => `L ${x} ${y}`).join(' ')
+  }
+  if (pieceStyle === 'organic') {
+    const leftShoulder = point(center - edge.width * 0.24, sign * depth * 0.78)
+    const top = point(center, sign * depth)
+    const rightShoulder = point(center + edge.width * 0.24, sign * depth * 0.78)
+    return [
+      `L ${p0[0]} ${p0[1]}`,
+      c(point(before + edge.width * 0.09, sign * depth * 0.08), point(center - edge.width * 0.35, sign * depth * 0.1), leftShoulder),
+      c(point(center - edge.width * 0.12, sign * depth * 1.04), point(center - edge.width * 0.07, sign * depth), top),
+      c(point(center + edge.width * 0.07, sign * depth), point(center + edge.width * 0.12, sign * depth * 1.04), rightShoulder),
+      c(point(center + edge.width * 0.35, sign * depth * 0.1), point(after - edge.width * 0.09, sign * depth * 0.08), p1),
+      `L ${rounded(endX)} ${rounded(endY)}`,
+    ].join(' ')
+  }
   return [
     `L ${p0[0]} ${p0[1]}`,
     c(a1, a2, a3),
@@ -77,9 +112,10 @@ function edgeCommands(startX, startY, endX, endY, edge, cellWidth, cellHeight) {
   ].join(' ')
 }
 
-export function createPuzzleGeometry(imageWidth, imageHeight, pieceCount) {
+export function createPuzzleGeometry(imageWidth, imageHeight, pieceCount, pieceStyle = 'classic') {
   if (!SUPPORTED_LEVELS.includes(pieceCount)) throw new Error('Elige un nivel disponible: 24, 48, 96 o 192 piezas.')
   if (!(imageWidth > 0 && imageHeight > 0)) throw new Error('La imagen no tiene dimensiones válidas.')
+  if (!PIECE_STYLES.includes(pieceStyle)) throw new Error('Elige un estilo de piezas válido.')
   const aspectRatio = imageWidth / imageHeight
   const grid = chooseGrid(pieceCount, aspectRatio)
   const maxBoardWidth = 790
@@ -88,7 +124,7 @@ export function createPuzzleGeometry(imageWidth, imageHeight, pieceCount) {
   const height = width / aspectRatio
   const cellWidth = width / grid.columns
   const cellHeight = height / grid.rows
-  const edges = buildEdgeTables(grid.rows, grid.columns)
+  const edges = buildEdgeTables(grid.rows, grid.columns, pieceStyle)
   const pieces = []
   const occupied = []
 
@@ -99,10 +135,10 @@ export function createPuzzleGeometry(imageWidth, imageHeight, pieceCount) {
       const right = column < grid.columns - 1 ? edges.vertical[column + 1][row] : null
       const bottom = row < grid.rows - 1 ? edges.horizontal[row + 1][column] : null
       const left = column > 0 ? { ...edges.vertical[column][row], sign: -edges.vertical[column][row].sign } : null
-      const topCommands = edgeCommands(0, 0, cellWidth, 0, top, cellWidth, cellHeight)
-      const rightCommands = edgeCommands(cellWidth, 0, cellWidth, cellHeight, right, cellWidth, cellHeight)
-      const bottomCommands = edgeCommands(cellWidth, cellHeight, 0, cellHeight, bottom, cellWidth, cellHeight)
-      const leftCommands = edgeCommands(0, cellHeight, 0, 0, left, cellWidth, cellHeight)
+      const topCommands = edgeCommands(0, 0, cellWidth, 0, top, cellWidth, cellHeight, pieceStyle)
+      const rightCommands = edgeCommands(cellWidth, 0, cellWidth, cellHeight, right, cellWidth, cellHeight, pieceStyle)
+      const bottomCommands = edgeCommands(cellWidth, cellHeight, 0, cellHeight, bottom, cellWidth, cellHeight, pieceStyle)
+      const leftCommands = edgeCommands(0, cellHeight, 0, 0, left, cellWidth, cellHeight, pieceStyle)
       const path = `M 0 0 ${topCommands} ${rightCommands} ${bottomCommands} ${leftCommands} Z`
       const scatter = chooseScatterPoint({ width, height, cellWidth, cellHeight, row, column, canvasWidth: STAGE_WIDTH, canvasHeight: STAGE_HEIGHT, occupied })
       occupied.push({
@@ -126,7 +162,8 @@ export function createPuzzleGeometry(imageWidth, imageHeight, pieceCount) {
   }
 
   return {
-    version: 1,
+    version: 2,
+    pieceStyle,
     board: {
       x: rounded((1360 - width) / 2),
       y: rounded((900 - height) / 2),
@@ -142,8 +179,8 @@ export function createPuzzleGeometry(imageWidth, imageHeight, pieceCount) {
   }
 }
 
-export function createPuzzle(pieceCount, imageWidth, imageHeight, rotationMode = 'fixed') {
-  const base = createPuzzleGeometry(imageWidth, imageHeight, pieceCount)
+export function createPuzzle(pieceCount, imageWidth, imageHeight, rotationMode = 'fixed', pieceStyle = 'classic') {
+  const base = createPuzzleGeometry(imageWidth, imageHeight, pieceCount, pieceStyle)
   const board = base.board
   return {
     width: board.width,
@@ -151,6 +188,7 @@ export function createPuzzle(pieceCount, imageWidth, imageHeight, rotationMode =
     rows: board.rows,
     cols: board.columns,
     seed: Math.floor(Math.random() * 2_147_000_000),
+    pieceStyle,
     stageWidth: STAGE_WIDTH,
     stageHeight: STAGE_HEIGHT,
     boardX: board.x,

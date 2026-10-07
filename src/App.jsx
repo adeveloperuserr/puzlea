@@ -5,7 +5,7 @@ import {
   Trash2, Upload, UserRound, X,
 } from 'lucide-react';
 import PuzzleStage from './game/PuzzleStage';
-import { createPuzzle } from './game/geometry';
+import { createPuzzle, PIECE_STYLES } from './game/geometry';
 import { prepareImage } from './lib/image';
 import { deletePuzzle, getPuzzle, listPuzzles, savePuzzle } from './lib/puzzleStore';
 import { supabaseConfigured } from './lib/supabaseConfig';
@@ -17,6 +17,11 @@ const LEVELS = [
   { count: 96, title: 'Desafío', detail: 'Concentración' },
   { count: 192, title: 'A fondo', detail: 'Pieza a pieza' },
 ];
+const PIECE_STYLE_COPY = {
+  classic: { label: 'Clásica', detail: 'Pestañas curvas y equilibradas.' },
+  organic: { label: 'Orgánica', detail: 'Curvas más amplias y suaves.' },
+  geometric: { label: 'Geométrica', detail: 'Conectores de líneas rectas.' },
+};
 
 function useObjectUrl(blob) {
   const [url, setUrl] = useState('');
@@ -87,6 +92,18 @@ function DifficultyPicker({ value, onChange }) {
         ))}
       </div>
     </fieldset>
+  );
+}
+
+function PieceStylePicker({ value, onChange }) {
+  return (
+    <div className="option-row">
+      <label className="option-label" htmlFor="piece-style">Forma de las piezas</label>
+      <select id="piece-style" value={value} onChange={(event) => onChange(event.target.value)}>
+        {PIECE_STYLES.map((style) => <option key={style} value={style}>{PIECE_STYLE_COPY[style].label}</option>)}
+      </select>
+      <p className="option-help">{PIECE_STYLE_COPY[value]?.detail ?? PIECE_STYLE_COPY.classic.detail} Las piezas vecinas siempre encajan.</p>
+    </div>
   );
 }
 
@@ -161,7 +178,7 @@ function SavedCard({ puzzle, onOpen, onDelete }) {
   );
 }
 
-function Landing({ image, level, setLevel, rotationMode, setRotationMode, timerEnabled, setTimerEnabled, onFile, fileBusy, fileError, onStart, savedGames, onOpenSaved, onDeleteSaved, onImport, message }) {
+function Landing({ image, level, setLevel, rotationMode, setRotationMode, pieceStyle, setPieceStyle, timerEnabled, setTimerEnabled, onFile, fileBusy, fileError, onStart, savedGames, onOpenSaved, onDeleteSaved, onImport, message }) {
   const importRef = useRef(null);
   return (
     <main className="home-main">
@@ -191,6 +208,7 @@ function Landing({ image, level, setLevel, rotationMode, setRotationMode, timerE
           <ImageDrop image={image} busy={fileBusy} onFile={onFile} error={fileError} />
           <div className="builder-options">
             <DifficultyPicker value={level} onChange={setLevel} />
+            <PieceStylePicker value={pieceStyle} onChange={setPieceStyle} />
             <div className="option-row">
               <label className="option-label" htmlFor="rotation-mode">Rotación de piezas</label>
               <select id="rotation-mode" value={rotationMode} onChange={(event) => setRotationMode(event.target.value)}>
@@ -291,7 +309,7 @@ function GalleryCard({ puzzle, onPlay }) {
   );
 }
 
-function Gallery({ user, level, setLevel, rotationMode, timerEnabled, onOpenPuzzle, onNotice }) {
+function Gallery({ user, level, setLevel, rotationMode, pieceStyle, setPieceStyle, timerEnabled, onOpenPuzzle, onNotice }) {
   const [items, setItems] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -373,7 +391,7 @@ function Gallery({ user, level, setLevel, rotationMode, timerEnabled, onOpenPuzz
       if (!response.ok) throw new Error('download');
       const blob = await response.blob();
       const image = await prepareImage(new File([blob], `${puzzle.title}.jpg`, { type: 'image/jpeg' }));
-      onOpenPuzzle(image, level, rotationMode, timerEnabled, puzzle.title);
+      onOpenPuzzle(image, level, rotationMode, timerEnabled, pieceStyle, puzzle.title);
     } catch {
       setError('No pudimos abrir esta imagen. Inténtalo de nuevo.');
     }
@@ -396,6 +414,7 @@ function Gallery({ user, level, setLevel, rotationMode, timerEnabled, onOpenPuzz
         <>
           <section className="gallery-controls">
             <DifficultyPicker value={level} onChange={setLevel} />
+            <PieceStylePicker value={pieceStyle} onChange={setPieceStyle} />
             <span className="gallery-level-note">Tu dificultad se aplica al empezar cada puzle.</span>
           </section>
           {error && <p className="field-error gallery-error" role="alert">{error}</p>}
@@ -442,6 +461,7 @@ function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus
   const placed = pieces.filter((piece) => piece.locked).length;
   const done = placed === pieces.length;
   const canRotate = puzzle.rotationMode !== 'fixed';
+  const showTargetOutlines = puzzle.showTargetOutlines ?? puzzle.level <= 48;
 
   useEffect(() => {
     if (!puzzle.timerEnabled || done) return undefined;
@@ -467,6 +487,10 @@ function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus
     onChange({ ...puzzle, geometry: { ...puzzle.geometry, pieces: updated }, updatedAt: Date.now() });
   }
 
+  function toggleTargetOutlines() {
+    onChange({ ...puzzle, showTargetOutlines: !showTargetOutlines, updatedAt: Date.now() });
+  }
+
   return (
     <main className="game-main">
       <div className="game-topline">
@@ -476,7 +500,7 @@ function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus
       </div>
       <div className="game-layout">
         <section className="game-board-column" aria-label="Zona de juego">
-          <PuzzleStage puzzle={puzzle} imageUrl={imageUrl} onChange={onChange} selectedId={selectedId} onSelect={setSelectedId} showHint={showHint} />
+          <PuzzleStage puzzle={puzzle} imageUrl={imageUrl} onChange={onChange} selectedId={selectedId} onSelect={setSelectedId} showHint={showHint} showTargetOutlines={showTargetOutlines} />
           {done ? (
             <div className="completion-banner"><span className="completion-mark"><Check size={19} /></span><div><strong>¡Rompecabezas completo!</strong><span>{puzzle.timerEnabled ? `Lo armaste en ${formatTime(puzzle.elapsedSeconds)}.` : 'Buen momento, pieza a pieza.'}</span></div><button className="text-button" onClick={onBack}>Crear otro</button></div>
           ) : <p className="game-help"><span className="help-dot" /><span>Suelta cada pieza para comprobar si está en su lugar. Si no encaja, se queda donde la dejes.<small>También puedes seleccionarla, moverla con las flechas y pulsar Enter para comprobar.</small></span></p>}
@@ -496,6 +520,9 @@ function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus
             </button>
             <button className={`hint-toggle${showHint ? ' active' : ''}`} onClick={() => setShowHint((value) => !value)}>
               {showHint ? <EyeOff size={16} /> : <Eye size={16} />}{showHint ? 'Quitar imagen del tablero' : 'Verla suavemente en el tablero'}
+            </button>
+            <button className={`hint-toggle${showTargetOutlines ? ' active' : ''}`} aria-pressed={showTargetOutlines} onClick={toggleTargetOutlines}>
+              {showTargetOutlines ? <EyeOff size={16} /> : <Eye size={16} />}{showTargetOutlines ? 'Ocultar siluetas' : 'Mostrar siluetas'}
             </button>
           </div>
           <div className="side-panel control-panel">
@@ -549,6 +576,7 @@ export default function App() {
   const [game, setGame] = useState(null);
   const [level, setLevel] = useState(24);
   const [rotationMode, setRotationMode] = useState('fixed');
+  const [pieceStyle, setPieceStyle] = useState('classic');
   const [timerEnabled, setTimerEnabled] = useState(false);
   const [savedGames, setSavedGames] = useState([]);
   const [fileBusy, setFileBusy] = useState(false);
@@ -637,11 +665,11 @@ export default function App() {
     }
   }
 
-  function startPuzzle(sourceImage, selectedLevel, selectedRotation, selectedTimer, name) {
-    const geometry = createPuzzle(selectedLevel, sourceImage.width, sourceImage.height, selectedRotation);
+  function startPuzzle(sourceImage, selectedLevel, selectedRotation, selectedTimer, selectedPieceStyle, name) {
+    const geometry = createPuzzle(selectedLevel, sourceImage.width, sourceImage.height, selectedRotation, selectedPieceStyle);
     const next = {
       id: crypto.randomUUID(),
-      formatVersion: 2,
+      formatVersion: 3,
       imageName: name || sourceImage.name,
       imageType: 'image/jpeg',
       imageWidth: sourceImage.width,
@@ -652,6 +680,8 @@ export default function App() {
       originalImageName: sourceImage.originalName ?? sourceImage.name,
       level: selectedLevel,
       rotationMode: selectedRotation,
+      pieceStyle: selectedPieceStyle,
+      showTargetOutlines: selectedLevel <= 48,
       timerEnabled: selectedTimer,
       elapsedSeconds: 0,
       boardWidth: geometry.width,
@@ -739,8 +769,8 @@ export default function App() {
     setNotice('Sesión cerrada.');
   }
 
-  function openGalleryPuzzle(sourceImage, selectedLevel, selectedRotation, selectedTimer, title) {
-    startPuzzle(sourceImage, selectedLevel, selectedRotation, selectedTimer, `${title}.jpg`);
+  function openGalleryPuzzle(sourceImage, selectedLevel, selectedRotation, selectedTimer, selectedPieceStyle, title) {
+    startPuzzle(sourceImage, selectedLevel, selectedRotation, selectedTimer, selectedPieceStyle, `${title}.jpg`);
     URL.revokeObjectURL(sourceImage.url);
   }
 
@@ -761,7 +791,7 @@ export default function App() {
           onClosePrint={() => setPrintPreviewUrl('')}
         />
       ) : page === 'gallery' ? (
-        <Gallery user={user} level={level} setLevel={setLevel} rotationMode={rotationMode} timerEnabled={timerEnabled} onOpenPuzzle={openGalleryPuzzle} onNotice={setNotice} />
+        <Gallery user={user} level={level} setLevel={setLevel} rotationMode={rotationMode} pieceStyle={pieceStyle} setPieceStyle={setPieceStyle} timerEnabled={timerEnabled} onOpenPuzzle={openGalleryPuzzle} onNotice={setNotice} />
       ) : (
         <Landing
           image={image}
@@ -769,12 +799,14 @@ export default function App() {
           setLevel={setLevel}
           rotationMode={rotationMode}
           setRotationMode={setRotationMode}
+          pieceStyle={pieceStyle}
+          setPieceStyle={setPieceStyle}
           timerEnabled={timerEnabled}
           setTimerEnabled={setTimerEnabled}
           onFile={handleImage}
           fileBusy={fileBusy}
           fileError={fileError}
-          onStart={() => image && startPuzzle(image, level, rotationMode, timerEnabled)}
+          onStart={() => image && startPuzzle(image, level, rotationMode, timerEnabled, pieceStyle)}
           savedGames={savedGames}
           onOpenSaved={openSaved}
           onDeleteSaved={removeSaved}

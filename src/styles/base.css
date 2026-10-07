@@ -181,9 +181,9 @@ button:disabled { cursor: not-allowed; opacity: .54; }
 .gallery-setup h2 { margin: 0 0 7px; font: 750 17px 'Segoe UI Variable', sans-serif; }
 .gallery-setup p { max-width: 730px; margin: 0; color: #758984; font-size: 12px; line-height: 1.7; }
 .setup-badge { position: absolute; top: 20px; right: 20px; padding: 6px 9px; border-radius: 99px; background: #ebf1e2; color: #748251; font-size: 10px; font-weight: 700; }
-.gallery-controls { display: flex; align-items: end; justify-content: space-between; gap: 22px; margin: 37px 0 20px; }
-.gallery-controls .difficulty-fieldset { min-width: min(100%, 510px); }
-.gallery-level-note { padding-bottom: 11px; color: #8c9d98; font-size: 11px; }
+.gallery-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(270px, 360px); align-items: end; gap: 14px 22px; margin: 37px 0 20px; }
+.gallery-controls .difficulty-fieldset { min-width: 0; }
+.gallery-level-note { grid-column: 1 / -1; color: #8c9d98; font-size: 11px; }
 .gallery-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 17px; }
 .gallery-card { overflow: hidden; border: 1px solid #dce6e1; border-radius: 16px; background: #fbfcf7; }
 .gallery-image { width: 100%; aspect-ratio: 1.28; position: relative; display: block; overflow: hidden; padding: 0; border: 0; background: #dce8e2; cursor: pointer; }
@@ -334,6 +334,9 @@ button:disabled { cursor: not-allowed; opacity: .54; }
   .game-sidebar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .reference-thumb { height: 90px; }
   .game-topline { grid-template-columns: 1fr 1.3fr 1fr; }
+  .gallery-controls { grid-template-columns: 1fr; }
+  .gallery-controls .difficulty-fieldset, .gallery-controls .option-row { width: 100%; }
+  .gallery-level-note { grid-column: auto; }
 }
 @media (max-width: 600px) {
   .topbar { height: 65px; padding: 0 17px; }
@@ -381,8 +384,7 @@ button:disabled { cursor: not-allowed; opacity: .54; }
   .gallery-setup { align-items: flex-start; padding: 19px; }
   .setup-illustration { width: 45px; height: 45px; }
   .setup-badge { top: 10px; right: 10px; font-size: 8px; }
-  .gallery-controls { align-items: flex-start; flex-direction: column; gap: 6px; }
-  .gallery-controls .difficulty-fieldset { min-width: 0; width: 100%; }
+  .gallery-controls { gap: 12px; }
   .gallery-level-note { padding: 0; }
   .gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
   .gallery-card-copy { padding: 10px; }

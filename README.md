@@ -5,9 +5,10 @@ Convierte tus imágenes en rompecabezas y juega a tu ritmo. Puzlea está pensada
 ## Qué puedes hacer
 
 - Crear rompecabezas de 24, 48, 96 o 192 piezas con una imagen JPG, PNG o WebP de hasta 20 MB y 40 megapíxeles.
+- Elegir piezas clásicas, orgánicas o geométricas; mostrar u ocultar las siluetas de destino durante la partida.
 - Elegir orientación fija, orientación inicial aleatoria o giro manual durante la partida.
 - Consultar la imagen original, jugar con o sin cronómetro y continuar después desde tus partidas guardadas.
-- Exportar e importar un archivo `.puzlea` que conserva imagen, geometría y avance.
+- Exportar e importar un archivo `.puzlea` que conserva imagen, estilo, pistas, geometría y avance.
 - Revisar y descargar un PDF de impresión con líneas de corte y marcas de registro para unir varias hojas.
 - Explorar y enviar imágenes a una galería opcional. Las publicaciones quedan privadas hasta una aprobación manual.
 
