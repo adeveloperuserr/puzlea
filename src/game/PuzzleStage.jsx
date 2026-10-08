@@ -1,4 +1,4 @@
-import { useId, useRef } from 'react';
+import { useId, useMemo, useRef } from 'react';
 import { STAGE_HEIGHT, STAGE_WIDTH } from './geometry';
 
 function pointerPosition(event, element) {
@@ -9,11 +9,33 @@ function pointerPosition(event, element) {
   };
 }
 
-export default function PuzzleStage({ puzzle, imageUrl, onChange, selectedId, onSelect, showHint, showTargetOutlines = true }) {
+function shuffledPieceNumbers(count, seed) {
+  const numbers = Array.from({ length: count }, (_, index) => index + 1);
+  let state = seed >>> 0;
+  for (let index = count - 1; index > 0; index -= 1) {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    const other = state % (index + 1);
+    [numbers[index], numbers[other]] = [numbers[other], numbers[index]];
+  }
+  return numbers;
+}
+
+function PieceNumber({ x, y, number, radius, rotation = 0, target = false }) {
+  return (
+    <g transform={rotation ? `rotate(${-rotation} ${x} ${y})` : undefined} className={`piece-number${target ? ' piece-number-target' : ''}`} pointerEvents="none" aria-hidden="true">
+      <circle cx={x} cy={y} r={radius} />
+      <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fontSize={number > 99 ? radius * 0.73 : radius * 0.91}>{number}</text>
+    </g>
+  );
+}
+
+export default function PuzzleStage({ puzzle, imageUrl, onChange, selectedId, onSelect, showHint, showTargetOutlines = false }) {
   const svgRef = useRef(null);
   const dragRef = useRef(null);
   const idPrefix = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const geometry = puzzle.geometry;
+  const pieceNumbers = useMemo(() => shuffledPieceNumbers(geometry.pieces.length, geometry.seed), [geometry.pieces.length, geometry.seed]);
+  const numberRadius = Math.max(9, Math.min(14, Math.min(geometry.cellWidth, geometry.cellHeight) * 0.21));
   const activePieces = [...geometry.pieces].sort((a, b) => {
     if (a.id === selectedId) return 1;
     if (b.id === selectedId) return -1;
@@ -121,7 +143,10 @@ export default function PuzzleStage({ puzzle, imageUrl, onChange, selectedId, on
         {showTargetOutlines && (
           <g transform={`translate(${geometry.boardX} ${geometry.boardY})`} aria-hidden="true">
             {geometry.pieces.map((piece) => (
-              <path key={piece.id} d={piece.path} transform={`translate(${piece.col * geometry.cellWidth} ${piece.row * geometry.cellHeight})`} fill="#e7efed" fillOpacity="0.48" stroke="#789496" strokeWidth="1.25" strokeDasharray="5 5" />
+              <g key={piece.id}>
+                <path d={piece.path} transform={`translate(${piece.col * geometry.cellWidth} ${piece.row * geometry.cellHeight})`} fill="#e7efed" fillOpacity="0.48" stroke="#789496" strokeWidth="1.25" strokeDasharray="5 5" />
+                {!piece.locked && <PieceNumber x={piece.centerX} y={piece.centerY} number={pieceNumbers[piece.id]} radius={numberRadius} target />}
+              </g>
             ))}
           </g>
         )}
@@ -135,7 +160,7 @@ export default function PuzzleStage({ puzzle, imageUrl, onChange, selectedId, on
               className={`puzzle-piece${placed ? ' is-locked' : ''}${piece.id === selectedId ? ' is-selected' : ''}`}
               role="button"
               tabIndex={placed ? -1 : 0}
-              aria-label={`Pieza ${piece.row + 1}, ${piece.col + 1}${piece.rotation ? `, girada ${piece.rotation} grados` : ''}`}
+              aria-label={`Pieza ${pieceNumbers[piece.id]}${piece.rotation ? `, girada ${piece.rotation} grados` : ''}`}
               onPointerDown={(event) => handlePointerDown(event, piece)}
               onFocus={() => onSelect(piece.id)}
               onKeyDown={(event) => handlePieceKeyDown(event, piece)}
@@ -152,6 +177,7 @@ export default function PuzzleStage({ puzzle, imageUrl, onChange, selectedId, on
                 pointerEvents="visiblePainted"
               />
               <path d={piece.path} transform={`translate(${piece.col * geometry.cellWidth} ${piece.row * geometry.cellHeight})`} className="piece-outline" fill="none" pointerEvents="none" />
+              {!placed && <PieceNumber x={piece.centerX} y={piece.centerY} number={pieceNumbers[piece.id]} radius={numberRadius} rotation={piece.rotation} />}
             </g>
           );
         })}

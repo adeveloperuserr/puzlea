@@ -19,8 +19,8 @@ const LEVELS = [
 ];
 const PIECE_STYLE_COPY = {
   classic: { label: 'Clásica', detail: 'Pestañas curvas y equilibradas.' },
-  organic: { label: 'Orgánica', detail: 'Curvas más amplias y suaves.' },
-  geometric: { label: 'Geométrica', detail: 'Conectores de líneas rectas.' },
+  organic: { label: 'Orgánica', detail: 'Bordes ondulados con dos curvas opuestas.' },
+  geometric: { label: 'Geométrica', detail: 'Pestañas anchas con ángulos rectos.' },
 };
 
 function useObjectUrl(blob) {
@@ -456,12 +456,12 @@ function Gallery({ user, level, setLevel, rotationMode, pieceStyle, setPieceStyl
 function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus, onChange, onBack, onExport, onPrint, onClosePrint }) {
   const [selectedId, setSelectedId] = useState(null);
   const [showHint, setShowHint] = useState(false);
+  const [showTargetOutlines, setShowTargetOutlines] = useState(false);
   const [showReference, setShowReference] = useState(false);
   const pieces = puzzle.geometry.pieces;
   const placed = pieces.filter((piece) => piece.locked).length;
   const done = placed === pieces.length;
   const canRotate = puzzle.rotationMode !== 'fixed';
-  const showTargetOutlines = puzzle.showTargetOutlines ?? puzzle.level <= 48;
 
   useEffect(() => {
     if (!puzzle.timerEnabled || done) return undefined;
@@ -488,7 +488,7 @@ function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus
   }
 
   function toggleTargetOutlines() {
-    onChange({ ...puzzle, showTargetOutlines: !showTargetOutlines, updatedAt: Date.now() });
+    setShowTargetOutlines((value) => !value);
   }
 
   return (
@@ -503,7 +503,7 @@ function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus
           <PuzzleStage puzzle={puzzle} imageUrl={imageUrl} onChange={onChange} selectedId={selectedId} onSelect={setSelectedId} showHint={showHint} showTargetOutlines={showTargetOutlines} />
           {done ? (
             <div className="completion-banner"><span className="completion-mark"><Check size={19} /></span><div><strong>¡Rompecabezas completo!</strong><span>{puzzle.timerEnabled ? `Lo armaste en ${formatTime(puzzle.elapsedSeconds)}.` : 'Buen momento, pieza a pieza.'}</span></div><button className="text-button" onClick={onBack}>Crear otro</button></div>
-          ) : <p className="game-help"><span className="help-dot" /><span>Suelta cada pieza para comprobar si está en su lugar. Si no encaja, se queda donde la dejes.<small>También puedes seleccionarla, moverla con las flechas y pulsar Enter para comprobar.</small></span></p>}
+          ) : <p className="game-help"><span className="help-dot" /><span>Suelta cada pieza para comprobar si está en su lugar. Si no encaja, se queda donde la dejes.<small>Los números identifican piezas; activa «Ver espacios» si quieres conocer su posición. También puedes moverlas con las flechas y pulsar Enter para comprobar.</small></span></p>}
         </section>
         <aside className="game-sidebar">
           <div className="side-panel side-progress">
@@ -522,7 +522,7 @@ function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus
               {showHint ? <EyeOff size={16} /> : <Eye size={16} />}{showHint ? 'Quitar imagen del tablero' : 'Verla suavemente en el tablero'}
             </button>
             <button className={`hint-toggle${showTargetOutlines ? ' active' : ''}`} aria-pressed={showTargetOutlines} onClick={toggleTargetOutlines}>
-              {showTargetOutlines ? <EyeOff size={16} /> : <Eye size={16} />}{showTargetOutlines ? 'Ocultar siluetas' : 'Mostrar siluetas'}
+              {showTargetOutlines ? <EyeOff size={16} /> : <Eye size={16} />}{showTargetOutlines ? 'Ocultar espacios' : 'Ver espacios (pista)'}
             </button>
           </div>
           <div className="side-panel control-panel">
@@ -681,7 +681,7 @@ export default function App() {
       level: selectedLevel,
       rotationMode: selectedRotation,
       pieceStyle: selectedPieceStyle,
-      showTargetOutlines: selectedLevel <= 48,
+      showTargetOutlines: false,
       timerEnabled: selectedTimer,
       elapsedSeconds: 0,
       boardWidth: geometry.width,

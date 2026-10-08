@@ -7,8 +7,8 @@ const randomBetween = (min, max) => min + Math.random() * (max - min)
 const rounded = (value) => Number(value.toFixed(2))
 const EDGE_RANGES = {
   classic: { width: [0.285, 0.34], depth: [0.145, 0.205] },
-  organic: { width: [0.34, 0.4], depth: [0.18, 0.23] },
-  geometric: { width: [0.28, 0.34], depth: [0.16, 0.21] },
+  organic: { width: [0.72, 0.82], depth: [0.19, 0.24] },
+  geometric: { width: [0.38, 0.46], depth: [0.21, 0.27] },
 }
 
 function chooseGrid(pieceCount, aspectRatio) {
@@ -44,7 +44,7 @@ function buildEdgeTables(rows, columns, pieceStyle) {
   return { horizontal, vertical }
 }
 
-function edgeCommands(startX, startY, endX, endY, edge, cellWidth, cellHeight, pieceStyle) {
+function edgeCommands(startX, startY, endX, endY, edge, cellWidth, cellHeight, pieceStyle, reversed = false) {
   if (!edge) return `L ${rounded(endX)} ${rounded(endY)}`
   const dx = endX - startX
   const dy = endY - startY
@@ -76,29 +76,33 @@ function edgeCommands(startX, startY, endX, endY, edge, cellWidth, cellHeight, p
   if (pieceStyle === 'geometric') {
     const points = [
       p0,
-      point(before + edge.width * 0.12, sign * depth * 0.12),
-      point(center - edge.width * 0.2, sign * depth * 0.12),
-      point(center - edge.width * 0.16, sign * depth * 0.76),
-      point(center - edge.width * 0.08, sign * depth),
-      point(center + edge.width * 0.08, sign * depth),
-      point(center + edge.width * 0.16, sign * depth * 0.76),
-      point(center + edge.width * 0.2, sign * depth * 0.12),
-      point(after - edge.width * 0.12, sign * depth * 0.12),
+      point(before, sign * depth * 0.28),
+      point(before + edge.width * 0.14, sign * depth * 0.28),
+      point(before + edge.width * 0.14, sign * depth),
+      point(after - edge.width * 0.14, sign * depth),
+      point(after - edge.width * 0.14, sign * depth * 0.28),
+      point(after, sign * depth * 0.28),
       p1,
       [rounded(endX), rounded(endY)],
     ]
     return points.map(([x, y]) => `L ${x} ${y}`).join(' ')
   }
   if (pieceStyle === 'organic') {
-    const leftShoulder = point(center - edge.width * 0.24, sign * depth * 0.78)
-    const top = point(center, sign * depth)
-    const rightShoulder = point(center + edge.width * 0.24, sign * depth * 0.78)
+    // Two opposing waves make an interlock unlike the single tab of the classic cut.
+    // Reverse the control points on opposite sides of the same shared boundary.
+    const profile = [
+      { start: [0, 0], c1: [0.1, 0], c2: [0.12, -0.72], end: [0.25, -0.72] },
+      { start: [0.25, -0.72], c1: [0.39, -0.72], c2: [0.39, 0], end: [0.5, 0] },
+      { start: [0.5, 0], c1: [0.61, 0], c2: [0.61, 1], end: [0.75, 1] },
+      { start: [0.75, 1], c1: [0.88, 1], c2: [0.9, 0], end: [1, 0] },
+    ]
+    const profilePoint = ([t, n]) => point(before + edge.width * (reversed ? 1 - t : t), sign * depth * n)
+    const segments = reversed
+      ? [...profile].reverse().map(({ start, c1, c2, end }) => ({ start: end, c1: c2, c2: c1, end: start }))
+      : profile
     return [
       `L ${p0[0]} ${p0[1]}`,
-      c(point(before + edge.width * 0.09, sign * depth * 0.08), point(center - edge.width * 0.35, sign * depth * 0.1), leftShoulder),
-      c(point(center - edge.width * 0.12, sign * depth * 1.04), point(center - edge.width * 0.07, sign * depth), top),
-      c(point(center + edge.width * 0.07, sign * depth), point(center + edge.width * 0.12, sign * depth * 1.04), rightShoulder),
-      c(point(center + edge.width * 0.35, sign * depth * 0.1), point(after - edge.width * 0.09, sign * depth * 0.08), p1),
+      ...segments.map(({ c1, c2, end }) => c(profilePoint(c1), profilePoint(c2), profilePoint(end))),
       `L ${rounded(endX)} ${rounded(endY)}`,
     ].join(' ')
   }
@@ -137,8 +141,8 @@ export function createPuzzleGeometry(imageWidth, imageHeight, pieceCount, pieceS
       const left = column > 0 ? { ...edges.vertical[column][row], sign: -edges.vertical[column][row].sign } : null
       const topCommands = edgeCommands(0, 0, cellWidth, 0, top, cellWidth, cellHeight, pieceStyle)
       const rightCommands = edgeCommands(cellWidth, 0, cellWidth, cellHeight, right, cellWidth, cellHeight, pieceStyle)
-      const bottomCommands = edgeCommands(cellWidth, cellHeight, 0, cellHeight, bottom, cellWidth, cellHeight, pieceStyle)
-      const leftCommands = edgeCommands(0, cellHeight, 0, 0, left, cellWidth, cellHeight, pieceStyle)
+      const bottomCommands = edgeCommands(cellWidth, cellHeight, 0, cellHeight, bottom, cellWidth, cellHeight, pieceStyle, true)
+      const leftCommands = edgeCommands(0, cellHeight, 0, 0, left, cellWidth, cellHeight, pieceStyle, true)
       const path = `M 0 0 ${topCommands} ${rightCommands} ${bottomCommands} ${leftCommands} Z`
       const scatter = chooseScatterPoint({ width, height, cellWidth, cellHeight, row, column, canvasWidth: STAGE_WIDTH, canvasHeight: STAGE_HEIGHT, occupied })
       occupied.push({

@@ -262,6 +262,10 @@ button:disabled { cursor: not-allowed; opacity: .54; }
 .puzzle-piece.is-selected .piece-outline { stroke: #d7ef69; stroke-width: 3.3px; }
 .puzzle-piece.is-locked .piece-outline { stroke: rgba(255,255,255,.43); stroke-width: 1.4px; }
 .puzzle-piece.is-locked { animation: piece-lock .24s ease-out; }
+.piece-number circle { fill: rgba(30, 70, 64, .88); stroke: rgba(255, 255, 255, .88); stroke-width: 1.2px; }
+.piece-number text { fill: #fff; font-family: 'Segoe UI Variable', sans-serif; font-weight: 800; }
+.piece-number-target circle { fill: rgba(232, 243, 218, .94); stroke: #66877c; }
+.piece-number-target text { fill: #315b51; }
 @keyframes piece-lock { 0% { filter: drop-shadow(0 0 9px rgba(215,239,105,.95)); } 100% { filter: none; } }
 .game-help { display: flex; align-items: center; gap: 8px; margin: 11px 3px 0; color: #718681; font-size: 11px; }
 .game-help small { display: block; margin-top: 4px; color: #95a39f; font-size: 9px; }
