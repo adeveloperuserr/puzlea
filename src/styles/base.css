@@ -256,16 +256,19 @@ button:disabled { cursor: not-allowed; opacity: .54; }
 .puzzle-stage { width: 100%; aspect-ratio: 68 / 45; display: block; touch-action: none; user-select: none; }
 .stage-caption { fill: #53726c; font: 600 18px 'Segoe UI Variable', sans-serif; }
 .puzzle-piece { transition: filter .15s ease; }
+.puzzle-piece:focus { outline: none; }
 .puzzle-piece:not(.is-locked):hover { filter: drop-shadow(0 4px 4px rgba(24,65,59,.27)); }
 .puzzle-piece.is-selected:not(.is-locked) { filter: drop-shadow(0 5px 5px rgba(24,65,59,.33)); }
 .piece-outline { stroke: rgba(255,255,255,.91); stroke-width: 2.2px; vector-effect: non-scaling-stroke; }
-.puzzle-piece.is-selected .piece-outline { stroke: #d7ef69; stroke-width: 3.3px; }
+.puzzle-piece.is-selected .piece-outline, .puzzle-piece:focus-visible .piece-outline { stroke: #d7ef69; stroke-width: 3.3px; }
 .puzzle-piece.is-locked .piece-outline { stroke: rgba(255,255,255,.43); stroke-width: 1.4px; }
 .puzzle-piece.is-locked { animation: piece-lock .24s ease-out; }
-.piece-number circle { fill: rgba(30, 70, 64, .88); stroke: rgba(255, 255, 255, .88); stroke-width: 1.2px; }
-.piece-number text { fill: #fff; font-family: 'Segoe UI Variable', sans-serif; font-weight: 800; }
-.piece-number-target circle { fill: rgba(232, 243, 218, .94); stroke: #66877c; }
+.piece-number circle { fill: rgba(30, 70, 64, .55); stroke: rgba(255, 255, 255, .48); stroke-width: 1px; }
+.piece-number text { fill: rgba(255, 255, 255, .9); font-family: 'Segoe UI Variable', sans-serif; font-weight: 700; }
+.puzzle-piece:hover .piece-number circle, .puzzle-piece.is-selected .piece-number circle { fill: rgba(30, 70, 64, .82); }
+.piece-number-target circle { fill: #e6f78d; stroke: #fff; filter: drop-shadow(0 0 5px rgba(220, 244, 83, .95)); animation: number-hint-pulse .9s ease-in-out 2; }
 .piece-number-target text { fill: #315b51; }
+@keyframes number-hint-pulse { 50% { opacity: .55; } }
 @keyframes piece-lock { 0% { filter: drop-shadow(0 0 9px rgba(215,239,105,.95)); } 100% { filter: none; } }
 .game-help { display: flex; align-items: center; gap: 8px; margin: 11px 3px 0; color: #718681; font-size: 11px; }
 .game-help small { display: block; margin-top: 4px; color: #95a39f; font-size: 9px; }

@@ -456,12 +456,15 @@ function Gallery({ user, level, setLevel, rotationMode, pieceStyle, setPieceStyl
 function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus, onChange, onBack, onExport, onPrint, onClosePrint }) {
   const [selectedId, setSelectedId] = useState(null);
   const [showHint, setShowHint] = useState(false);
-  const [showTargetOutlines, setShowTargetOutlines] = useState(false);
+  const [showNumberHint, setShowNumberHint] = useState(false);
+  const numberHintTimer = useRef(null);
   const [showReference, setShowReference] = useState(false);
   const pieces = puzzle.geometry.pieces;
   const placed = pieces.filter((piece) => piece.locked).length;
   const done = placed === pieces.length;
   const canRotate = puzzle.rotationMode !== 'fixed';
+
+  useEffect(() => () => window.clearTimeout(numberHintTimer.current), []);
 
   useEffect(() => {
     if (!puzzle.timerEnabled || done) return undefined;
@@ -487,8 +490,10 @@ function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus
     onChange({ ...puzzle, geometry: { ...puzzle.geometry, pieces: updated }, updatedAt: Date.now() });
   }
 
-  function toggleTargetOutlines() {
-    setShowTargetOutlines((value) => !value);
+  function revealNumbers() {
+    window.clearTimeout(numberHintTimer.current);
+    setShowNumberHint(true);
+    numberHintTimer.current = window.setTimeout(() => setShowNumberHint(false), 5000);
   }
 
   return (
@@ -500,10 +505,10 @@ function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus
       </div>
       <div className="game-layout">
         <section className="game-board-column" aria-label="Zona de juego">
-          <PuzzleStage puzzle={puzzle} imageUrl={imageUrl} onChange={onChange} selectedId={selectedId} onSelect={setSelectedId} showHint={showHint} showTargetOutlines={showTargetOutlines} />
+          <PuzzleStage puzzle={puzzle} imageUrl={imageUrl} onChange={onChange} selectedId={selectedId} onSelect={setSelectedId} showHint={showHint} showNumberHint={showNumberHint} />
           {done ? (
             <div className="completion-banner"><span className="completion-mark"><Check size={19} /></span><div><strong>¡Rompecabezas completo!</strong><span>{puzzle.timerEnabled ? `Lo armaste en ${formatTime(puzzle.elapsedSeconds)}.` : 'Buen momento, pieza a pieza.'}</span></div><button className="text-button" onClick={onBack}>Crear otro</button></div>
-          ) : <p className="game-help"><span className="help-dot" /><span>Suelta cada pieza para comprobar si está en su lugar. Si no encaja, se queda donde la dejes.<small>Los números identifican piezas; activa «Ver espacios» si quieres conocer su posición. También puedes moverlas con las flechas y pulsar Enter para comprobar.</small></span></p>}
+          ) : <p className="game-help"><span className="help-dot" /><span>Suelta cada pieza para comprobar si está en su lugar. Si no encaja, se queda donde la dejes.<small>Los números identifican piezas; la pista ilumina sus posiciones durante 5 segundos. También puedes moverlas con las flechas y pulsar Enter para comprobar.</small></span></p>}
         </section>
         <aside className="game-sidebar">
           <div className="side-panel side-progress">
@@ -521,8 +526,8 @@ function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus
             <button className={`hint-toggle${showHint ? ' active' : ''}`} onClick={() => setShowHint((value) => !value)}>
               {showHint ? <EyeOff size={16} /> : <Eye size={16} />}{showHint ? 'Quitar imagen del tablero' : 'Verla suavemente en el tablero'}
             </button>
-            <button className={`hint-toggle${showTargetOutlines ? ' active' : ''}`} aria-pressed={showTargetOutlines} onClick={toggleTargetOutlines}>
-              {showTargetOutlines ? <EyeOff size={16} /> : <Eye size={16} />}{showTargetOutlines ? 'Ocultar espacios' : 'Ver espacios (pista)'}
+            <button className={`hint-toggle${showNumberHint ? ' active' : ''}`} aria-pressed={showNumberHint} onClick={revealNumbers}>
+              <Sparkles size={16} />{showNumberHint ? 'Iluminar otra vez (5 s)' : 'Iluminar posiciones (5 s)'}
             </button>
           </div>
           <div className="side-panel control-panel">

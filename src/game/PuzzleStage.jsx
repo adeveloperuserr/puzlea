@@ -29,13 +29,13 @@ function PieceNumber({ x, y, number, radius, rotation = 0, target = false }) {
   );
 }
 
-export default function PuzzleStage({ puzzle, imageUrl, onChange, selectedId, onSelect, showHint, showTargetOutlines = false }) {
+export default function PuzzleStage({ puzzle, imageUrl, onChange, selectedId, onSelect, showHint, showNumberHint = false }) {
   const svgRef = useRef(null);
   const dragRef = useRef(null);
   const idPrefix = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const geometry = puzzle.geometry;
   const pieceNumbers = useMemo(() => shuffledPieceNumbers(geometry.pieces.length, geometry.seed), [geometry.pieces.length, geometry.seed]);
-  const numberRadius = Math.max(9, Math.min(14, Math.min(geometry.cellWidth, geometry.cellHeight) * 0.21));
+  const numberRadius = Math.max(9, Math.min(12, Math.min(geometry.cellWidth, geometry.cellHeight) * 0.18));
   const activePieces = [...geometry.pieces].sort((a, b) => {
     if (a.id === selectedId) return 1;
     if (b.id === selectedId) return -1;
@@ -140,13 +140,10 @@ export default function PuzzleStage({ puzzle, imageUrl, onChange, selectedId, on
         <rect x="10" y="10" width={STAGE_WIDTH - 20} height={STAGE_HEIGHT - 20} rx="26" fill="none" stroke="#fff" strokeOpacity="0.58" strokeWidth="2" />
         <rect x={geometry.boardX - 10} y={geometry.boardY - 10} width={geometry.width + 20} height={geometry.height + 20} rx="18" fill="#b8cdcb" stroke="#6a8c8e" strokeWidth="2" />
         {showHint && <image href={imageUrl} x={geometry.boardX} y={geometry.boardY} width={geometry.width} height={geometry.height} opacity="0.16" preserveAspectRatio="none" />}
-        {showTargetOutlines && (
+        {showNumberHint && (
           <g transform={`translate(${geometry.boardX} ${geometry.boardY})`} aria-hidden="true">
-            {geometry.pieces.map((piece) => (
-              <g key={piece.id}>
-                <path d={piece.path} transform={`translate(${piece.col * geometry.cellWidth} ${piece.row * geometry.cellHeight})`} fill="#e7efed" fillOpacity="0.48" stroke="#789496" strokeWidth="1.25" strokeDasharray="5 5" />
-                {!piece.locked && <PieceNumber x={piece.centerX} y={piece.centerY} number={pieceNumbers[piece.id]} radius={numberRadius} target />}
-              </g>
+            {geometry.pieces.filter((piece) => !piece.locked).map((piece) => (
+              <PieceNumber key={piece.id} x={piece.centerX} y={piece.centerY} number={pieceNumbers[piece.id]} radius={numberRadius + 2} target />
             ))}
           </g>
         )}
