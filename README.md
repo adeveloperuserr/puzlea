@@ -58,6 +58,8 @@ Compartir una imagen es opcional. Requiere una cuenta de Supabase y una acción 
 3. Ejecuta la migración `supabase/migrations/202610070001_puzlea_gallery.sql` en SQL Editor.
 4. Reinicia `npm run dev`.
 
+Puedes crear una cuenta antes de ejecutar la migración. La galería y los envíos necesitan esa tabla y el bucket; si faltan, la aplicación mostrará que aún no están listos.
+
 La clave publishable puede usarse en el navegador porque las políticas RLS son la barrera de acceso. **Nunca** pongas la clave `service_role` en `.env`, en el código o en el navegador. El bucket `gallery-images` es privado; una imagen solo puede leerse cuando su envío propio o aprobado autoriza el acceso.
 
 Para revisar publicaciones, usa Supabase Dashboard con acceso administrativo. Cambia el estado de una fila de `pending` a `approved` o `rejected`; en ambos casos registra `reviewed_at` y, cuando esté disponible, `reviewed_by`. Los clientes no pueden cambiar estados y no se aprueba contenido automáticamente.

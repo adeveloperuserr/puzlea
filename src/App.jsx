@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowDownToLine, ArrowLeft, BadgeCheck, Check, Clock3, Eye, EyeOff, FolderOpen,
-  ImagePlus, LockKeyhole, LogOut, Printer, Puzzle, RotateCw, ShieldCheck, Sparkles,
+  ImagePlus, LockKeyhole, LogOut, Printer, Puzzle, RefreshCw, RotateCw, ShieldCheck, Sparkles,
   Trash2, Upload, UserRound, Volume2, VolumeX, X,
 } from 'lucide-react';
 import PuzzleStage from './game/PuzzleStage';
@@ -310,11 +310,27 @@ function GalleryCard({ puzzle, onPlay }) {
   );
 }
 
+function galleryLoadFailure(error) {
+  if (error?.code === 'PGRST205' || error?.code === '42P01') {
+    return {
+      title: 'La galería todavía no está lista',
+      message: import.meta.env.DEV
+        ? 'Supabase ya está conectado y puedes usar tu cuenta. Para ver o enviar puzles compartidos, ejecuta la migración SQL indicada en README > Conectar Supabase.'
+        : 'Aún estamos preparando los puzles compartidos. Puedes iniciar sesión y seguir jugando con tus imágenes.',
+    };
+  }
+  return {
+    title: 'No pudimos abrir la galería',
+    message: 'Vuelve a intentarlo en un momento. Tus partidas privadas siguen disponibles.',
+  };
+}
+
 function Gallery({ user, level, setLevel, rotationMode, pieceStyle, setPieceStyle, timerEnabled, onOpenPuzzle, onNotice }) {
   const [items, setItems] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState(null);
+  const [actionError, setActionError] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [shareImage, setShareImage] = useState(null);
@@ -325,12 +341,13 @@ function Gallery({ user, level, setLevel, rotationMode, pieceStyle, setPieceStyl
   async function refresh() {
     if (!supabaseConfigured) return;
     setLoading(true);
-    setError('');
+    setLoadError(null);
     try {
       const { listApprovedPuzzles } = await import('./lib/supabaseClient');
       setItems(await listApprovedPuzzles());
-    } catch {
-      setError('No pudimos cargar la galería. Inténtalo de nuevo en un momento.');
+    } catch (error) {
+      setItems([]);
+      setLoadError(galleryLoadFailure(error));
     } finally {
       setLoading(false);
     }
@@ -365,7 +382,7 @@ function Gallery({ user, level, setLevel, rotationMode, pieceStyle, setPieceStyl
 
   async function share(event) {
     event.preventDefault();
-    if (!user || !shareImage) return;
+    if (!user || !shareImage || loading || loadError) return;
     setSharing(true);
     setShareError('');
     try {
@@ -387,6 +404,7 @@ function Gallery({ user, level, setLevel, rotationMode, pieceStyle, setPieceStyl
   }
 
   async function play(puzzle) {
+    setActionError('');
     try {
       const response = await fetch(puzzle.imageUrl);
       if (!response.ok) throw new Error('download');
@@ -394,7 +412,7 @@ function Gallery({ user, level, setLevel, rotationMode, pieceStyle, setPieceStyl
       const image = await prepareImage(new File([blob], `${puzzle.title}.jpg`, { type: 'image/jpeg' }));
       onOpenPuzzle(image, level, rotationMode, timerEnabled, pieceStyle, puzzle.title);
     } catch {
-      setError('No pudimos abrir esta imagen. Inténtalo de nuevo.');
+      setActionError('No pudimos abrir esta imagen. Inténtalo de nuevo.');
     }
   }
 
@@ -418,8 +436,15 @@ function Gallery({ user, level, setLevel, rotationMode, pieceStyle, setPieceStyl
             <PieceStylePicker value={pieceStyle} onChange={setPieceStyle} />
             <span className="gallery-level-note">Tu dificultad se aplica al empezar cada puzle.</span>
           </section>
-          {error && <p className="field-error gallery-error" role="alert">{error}</p>}
-          {loading ? <div className="gallery-empty"><span className="loading-spinner" /><p>Cargando puzles…</p></div> : items.length ? (
+          {actionError && <p className="field-error gallery-error" role="alert">{actionError}</p>}
+          {loading ? <div className="gallery-empty"><span className="loading-spinner" /><p>Cargando puzles…</p></div> : loadError ? (
+            <section className="gallery-empty gallery-unavailable" role="alert">
+              <span className="empty-icon"><Puzzle size={19} /></span>
+              <h2>{loadError.title}</h2>
+              <p>{loadError.message}</p>
+              <button className="secondary-button compact" type="button" onClick={() => void refresh()}><RefreshCw size={15} /> Reintentar</button>
+            </section>
+          ) : items.length ? (
             <div className="gallery-grid">{items.map((item) => <GalleryCard key={item.id} puzzle={item} onPlay={play} />)}</div>
           ) : (
             <div className="gallery-empty"><span className="empty-icon"><Sparkles size={19} /></span><h2>La galería empieza contigo</h2><p>Cuando una publicación sea aprobada, aparecerá aquí.</p></div>
@@ -438,8 +463,9 @@ function Gallery({ user, level, setLevel, rotationMode, pieceStyle, setPieceStyl
                   <button type="button" className="secondary-button compact" onClick={() => fileRef.current?.click()}><ImagePlus size={16} /> Elegir imagen</button>
                 </div>
                 {shareError && <p className="field-error" role="alert">{shareError}</p>}
-                <button className="primary-button share-submit" disabled={!user || !shareImage || sharing || !title.trim()}>{sharing ? 'Enviando…' : 'Enviar a revisión'}</button>
+                <button className="primary-button share-submit" disabled={!user || !shareImage || sharing || loading || !title.trim() || Boolean(loadError)}>{sharing ? 'Enviando…' : 'Enviar a revisión'}</button>
                 {!user && <small className="form-hint">Inicia sesión o crea una cuenta para enviar.</small>}
+                {loadError && <small className="form-hint">Podrás enviar imágenes cuando la galería esté disponible.</small>}
               </form>
             </div>
             {user && submissions.length > 0 && (
