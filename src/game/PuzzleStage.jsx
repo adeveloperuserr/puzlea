@@ -29,7 +29,7 @@ function PieceNumber({ x, y, number, radius, rotation = 0, target = false }) {
   );
 }
 
-export default function PuzzleStage({ puzzle, imageUrl, onChange, selectedId, onSelect, showHint, showNumberHint = false }) {
+export default function PuzzleStage({ puzzle, imageUrl, onChange, onPiecePlaced, selectedId, onSelect, showHint, showNumberHint = false }) {
   const svgRef = useRef(null);
   const dragRef = useRef(null);
   const idPrefix = useId().replace(/[^a-zA-Z0-9_-]/g, '');
@@ -94,6 +94,7 @@ export default function PuzzleStage({ puzzle, imageUrl, onChange, selectedId, on
         : { ...candidate, offsetX: position.x, offsetY: position.y }
       : candidate);
     onChange({ ...puzzle, geometry: { ...geometry, pieces }, updatedAt: Date.now() });
+    if (canPlace && !piece.locked) onPiecePlaced?.();
   }
 
   function handlePieceKeyDown(event, piece) {

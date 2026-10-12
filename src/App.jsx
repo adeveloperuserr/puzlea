@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowDownToLine, ArrowLeft, BadgeCheck, Check, Clock3, Eye, EyeOff, FolderOpen,
   ImagePlus, LockKeyhole, LogOut, Printer, Puzzle, RotateCw, ShieldCheck, Sparkles,
-  Trash2, Upload, UserRound, X,
+  Trash2, Upload, UserRound, Volume2, VolumeX, X,
 } from 'lucide-react';
 import PuzzleStage from './game/PuzzleStage';
 import { createPuzzle, PIECE_STYLES } from './game/geometry';
 import { prepareImage } from './lib/image';
+import { playPlacementSound } from './lib/placementSound';
 import { deletePuzzle, getPuzzle, listPuzzles, savePuzzle } from './lib/puzzleStore';
 import { supabaseConfigured } from './lib/supabaseConfig';
 import './styles/base.css';
@@ -457,6 +458,10 @@ function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus
   const [selectedId, setSelectedId] = useState(null);
   const [showHint, setShowHint] = useState(false);
   const [showNumberHint, setShowNumberHint] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    try { return window.localStorage.getItem('puzlea:sound') !== 'off'; }
+    catch { return true; }
+  });
   const numberHintTimer = useRef(null);
   const [showReference, setShowReference] = useState(false);
   const pieces = puzzle.geometry.pieces;
@@ -496,6 +501,13 @@ function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus
     numberHintTimer.current = window.setTimeout(() => setShowNumberHint(false), 5000);
   }
 
+  function toggleSound() {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    try { window.localStorage.setItem('puzlea:sound', next ? 'on' : 'off'); }
+    catch { /* La preferencia solo durará esta sesión si el almacenamiento está bloqueado. */ }
+  }
+
   return (
     <main className="game-main">
       <div className="game-topline">
@@ -505,7 +517,7 @@ function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus
       </div>
       <div className="game-layout">
         <section className="game-board-column" aria-label="Zona de juego">
-          <PuzzleStage puzzle={puzzle} imageUrl={imageUrl} onChange={onChange} selectedId={selectedId} onSelect={setSelectedId} showHint={showHint} showNumberHint={showNumberHint} />
+          <PuzzleStage puzzle={puzzle} imageUrl={imageUrl} onChange={onChange} onPiecePlaced={soundEnabled ? playPlacementSound : undefined} selectedId={selectedId} onSelect={setSelectedId} showHint={showHint} showNumberHint={showNumberHint} />
           {done ? (
             <div className="completion-banner"><span className="completion-mark"><Check size={19} /></span><div><strong>¡Rompecabezas completo!</strong><span>{puzzle.timerEnabled ? `Lo armaste en ${formatTime(puzzle.elapsedSeconds)}.` : 'Buen momento, pieza a pieza.'}</span></div><button className="text-button" onClick={onBack}>Crear otro</button></div>
           ) : <p className="game-help"><span className="help-dot" /><span>Busca la silueta de cada pieza en el tablero y suéltala para comprobar si encaja. Si no encaja, se queda donde la dejes.<small>La pista ilumina los números de los espacios durante 5 segundos. También puedes mover piezas con las flechas y pulsar Enter para comprobar.</small></span></p>}
@@ -532,6 +544,10 @@ function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus
           </div>
           <div className="side-panel control-panel">
             <span className="panel-kicker">Controles</span>
+            <button className="secondary-button full-width" type="button" aria-pressed={soundEnabled} onClick={toggleSound}>
+              {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+              {soundEnabled ? 'Sonido al encajar: activado' : 'Sonido al encajar: apagado'}
+            </button>
             {canRotate ? (
               <button className="secondary-button full-width" onClick={rotateSelected} disabled={selectedId === null || pieces.find((piece) => piece.id === selectedId)?.locked}>
                 <RotateCw size={16} /> Girar pieza <kbd>R</kbd>

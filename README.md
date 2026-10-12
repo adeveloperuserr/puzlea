@@ -23,6 +23,7 @@ Las capturas muestran una imagen de ejemplo creada para este README. Puedes subi
 - Crear rompecabezas de 24, 48, 96 o 192 piezas con una imagen JPG, PNG o WebP de hasta 20 MB y 40 megapíxeles.
 - Elegir piezas clásicas, orgánicas o geométricas. El tablero muestra las siluetas de los espacios vacíos; las piezas tienen números discretos y la pista ilumina sus posiciones durante cinco segundos.
 - Elegir orientación fija, orientación inicial aleatoria o giro manual durante la partida.
+- Escuchar un sonido suave al encajar una pieza, con un control para apagarlo que recuerda tu elección.
 - Consultar la imagen original, jugar con o sin cronómetro y continuar después desde tus partidas guardadas.
 - Exportar e importar un archivo `.puzlea` que conserva imagen, estilo, geometría y avance.
 - Revisar y descargar un PDF de impresión con líneas de corte y marcas de registro para unir varias hojas.
