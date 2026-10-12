@@ -1,6 +1,22 @@
+<p align="center">
+  <img src="public/brand/puzlea-logo.png" alt="Logo de Puzlea" width="280">
+</p>
+
 # Puzlea
 
 Convierte tus imágenes en rompecabezas y juega a tu ritmo. Puzlea está pensada primero para computadora y guarda tus partidas en este dispositivo.
+
+## Vista previa
+
+### Crear un rompecabezas
+
+![Pantalla inicial de Puzlea para subir una imagen y elegir piezas, forma y rotación](docs/images/puzlea-inicio.png)
+
+### Armar las piezas
+
+![Partida de ejemplo con piezas mezcladas y siluetas visibles en el tablero](docs/images/puzlea-partida.png)
+
+Las capturas muestran una imagen de ejemplo creada para este README. Puedes subir tus propias imágenes al jugar.
 
 ## Qué puedes hacer
 
