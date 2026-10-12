@@ -140,6 +140,11 @@ export default function PuzzleStage({ puzzle, imageUrl, onChange, selectedId, on
         <rect x="10" y="10" width={STAGE_WIDTH - 20} height={STAGE_HEIGHT - 20} rx="26" fill="none" stroke="#fff" strokeOpacity="0.58" strokeWidth="2" />
         <rect x={geometry.boardX - 10} y={geometry.boardY - 10} width={geometry.width + 20} height={geometry.height + 20} rx="18" fill="#b8cdcb" stroke="#6a8c8e" strokeWidth="2" />
         {showHint && <image href={imageUrl} x={geometry.boardX} y={geometry.boardY} width={geometry.width} height={geometry.height} opacity="0.16" preserveAspectRatio="none" />}
+        <g transform={`translate(${geometry.boardX} ${geometry.boardY})`} aria-hidden="true" pointerEvents="none">
+          {geometry.pieces.filter((piece) => !piece.locked).map((piece) => (
+            <path key={piece.id} d={piece.path} transform={`translate(${piece.col * geometry.cellWidth} ${piece.row * geometry.cellHeight})`} className="piece-slot" />
+          ))}
+        </g>
         {showNumberHint && (
           <g transform={`translate(${geometry.boardX} ${geometry.boardY})`} aria-hidden="true">
             {geometry.pieces.filter((piece) => !piece.locked).map((piece) => (

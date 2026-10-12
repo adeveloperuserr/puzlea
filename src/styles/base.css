@@ -255,6 +255,7 @@ button:disabled { cursor: not-allowed; opacity: .54; }
 .stage-frame { overflow: hidden; border: 1px solid #c8d8d2; border-radius: 18px; background: #d9e6e5; box-shadow: 0 10px 30px rgba(38,78,72,.08); }
 .puzzle-stage { width: 100%; aspect-ratio: 68 / 45; display: block; touch-action: none; user-select: none; }
 .stage-caption { fill: #53726c; font: 600 18px 'Segoe UI Variable', sans-serif; }
+.piece-slot { fill: rgba(241, 248, 245, .24); stroke: rgba(70, 107, 105, .48); stroke-width: 1.4px; vector-effect: non-scaling-stroke; }
 .puzzle-piece { transition: filter .15s ease; }
 .puzzle-piece:focus { outline: none; }
 .puzzle-piece:not(.is-locked):hover { filter: drop-shadow(0 4px 4px rgba(24,65,59,.27)); }

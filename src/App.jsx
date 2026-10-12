@@ -508,7 +508,7 @@ function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus
           <PuzzleStage puzzle={puzzle} imageUrl={imageUrl} onChange={onChange} selectedId={selectedId} onSelect={setSelectedId} showHint={showHint} showNumberHint={showNumberHint} />
           {done ? (
             <div className="completion-banner"><span className="completion-mark"><Check size={19} /></span><div><strong>¡Rompecabezas completo!</strong><span>{puzzle.timerEnabled ? `Lo armaste en ${formatTime(puzzle.elapsedSeconds)}.` : 'Buen momento, pieza a pieza.'}</span></div><button className="text-button" onClick={onBack}>Crear otro</button></div>
-          ) : <p className="game-help"><span className="help-dot" /><span>Suelta cada pieza para comprobar si está en su lugar. Si no encaja, se queda donde la dejes.<small>Los números identifican piezas; la pista ilumina sus posiciones durante 5 segundos. También puedes moverlas con las flechas y pulsar Enter para comprobar.</small></span></p>}
+          ) : <p className="game-help"><span className="help-dot" /><span>Busca la silueta de cada pieza en el tablero y suéltala para comprobar si encaja. Si no encaja, se queda donde la dejes.<small>La pista ilumina los números de los espacios durante 5 segundos. También puedes mover piezas con las flechas y pulsar Enter para comprobar.</small></span></p>}
         </section>
         <aside className="game-sidebar">
           <div className="side-panel side-progress">
