@@ -221,6 +221,13 @@ button:disabled { cursor: not-allowed; opacity: .54; }
 .form-field input::placeholder, .form-field textarea::placeholder { color: #a2b0ab; font-weight: 400; }
 .auth-submit { width: 100%; min-height: 40px; margin-top: 2px; font-size: 11px; }
 .auth-switch { align-self: center; }
+.auth-status { margin: 0; padding: 10px 12px; border: 1px solid #d7e7d6; border-radius: 9px; background: #f2f8ef; color: #466e5d; font-size: 11px; line-height: 1.5; }
+.recovery-main { min-height: 100vh; display: grid; place-items: center; padding: 42px 24px; }
+.recovery-content { width: min(470px, 100%); }
+.recovery-content > .brand-logo { width: 145px; height: auto; }
+.recovery-content h1 { margin: 31px 0 10px; color: #244745; font-size: clamp(30px, 5vw, 42px); line-height: 1.08; letter-spacing: -1.4px; }
+.recovery-content h1 span { color: #3a8b7c; }
+.recovery-content > p { margin: 0 0 24px; color: #718583; font-size: 13px; }
 .signed-in-note { min-height: 96px; display: flex; align-items: center; gap: 10px; padding: 18px; border: 1px solid #e1e8e2; border-radius: 14px; background: #fff; color: #53816d; font-size: 11px; }
 .signed-in-note svg { flex: 0 0 auto; }
 .signed-in-note strong { display: block; margin-top: 3px; color: #3b5d56; }

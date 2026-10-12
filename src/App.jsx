@@ -74,6 +74,10 @@ function Header({ page, setPage, user, onSignOut, onAccount }) {
   );
 }
 
+function openingRecoveryLink() {
+  return new URLSearchParams(window.location.hash.slice(1)).get('type') === 'recovery';
+}
+
 function DifficultyPicker({ value, onChange }) {
   return (
     <fieldset className="difficulty-fieldset">
@@ -252,31 +256,96 @@ function Landing({ image, level, setLevel, rotationMode, setRotationMode, pieceS
   );
 }
 
+function PasswordUpdatePanel({ user, onComplete, onCancel }) {
+  const [password, setPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit(event) {
+    event.preventDefault();
+    if (password !== confirmation) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const { supabase } = await import('./lib/supabaseClient');
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) throw updateError;
+      onComplete();
+    } catch (updateError) {
+      setError(updateError.message || 'No pudimos cambiar la contraseña. Solicita un enlace nuevo e inténtalo otra vez.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="auth-card" onSubmit={submit}>
+      <div className="auth-card-heading"><span className="auth-icon"><LockKeyhole size={18} /></span><div><h3>Elige una contraseña nueva</h3><p>Usa el enlace que recibiste por correo.</p></div></div>
+      {user ? (
+        <>
+          <label className="form-field">Nueva contraseña<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" minLength={8} required /></label>
+          <label className="form-field">Repite la contraseña<input type="password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} autoComplete="new-password" minLength={8} required /></label>
+          {error && <p className="field-error" role="alert">{error}</p>}
+          <button className="primary-button auth-submit" disabled={busy}>{busy ? 'Guardando…' : 'Cambiar contraseña'}</button>
+        </>
+      ) : <>
+        <p className="auth-status" role="status">Estamos comprobando tu enlace de recuperación. Si no avanza, solicita uno nuevo.</p>
+        <button type="button" className="text-button auth-switch" onClick={onCancel}>Volver a iniciar sesión</button>
+      </>}
+    </form>
+  );
+}
+
 function AuthPanel({ user, onNotice }) {
   const [mode, setMode] = useState('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
 
   async function submit(event) {
     event.preventDefault();
     setBusy(true);
     setError('');
+    setStatus('');
     try {
       const { supabase } = await import('./lib/supabaseClient');
       if (!supabase) throw new Error('La conexión de cuentas no está configurada.');
       if (mode === 'signin') {
-        const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+        const { error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (authError) throw authError;
         onNotice('Sesión iniciada.');
-      } else {
-        const { data, error: authError } = await supabase.auth.signUp({ email, password });
+      } else if (mode === 'signup') {
+        const { data, error: authError } = await supabase.auth.signUp({ email: email.trim(), password });
         if (authError) throw authError;
-        onNotice(data.session ? 'Cuenta creada.' : 'Revisa tu correo para confirmar la cuenta.');
+        if (data.session) onNotice('Cuenta creada.');
+        else {
+          setMode('signin');
+          setStatus('Revisa tu correo y confirma la cuenta antes de iniciar sesión.');
+        }
+      } else {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: window.location.origin + window.location.pathname,
+        });
+        if (resetError) throw resetError;
+        setMode('signin');
+        setStatus('Si hay una cuenta con ese correo, recibirás un enlace para cambiar la contraseña. Revisa también la carpeta de spam.');
       }
     } catch (authError) {
-      setError(authError.message || 'No pudimos completar el acceso.');
+      if (authError.code === 'invalid_credentials') {
+        setError('No pudimos iniciar sesión con ese correo y contraseña. Revisa los datos o restablece la contraseña.');
+      } else if (authError.code === 'email_not_confirmed') {
+        setError('Confirma tu correo con el enlace que recibiste antes de iniciar sesión.');
+      } else if (authError.code === 'over_email_send_rate_limit') {
+        setError('Se alcanzó el límite de correos. Espera un poco antes de solicitar otro enlace.');
+      } else {
+        setError(authError.message || 'No pudimos completar el acceso.');
+      }
     } finally {
       setBusy(false);
     }
@@ -286,14 +355,16 @@ function AuthPanel({ user, onNotice }) {
 
   return (
     <form className="auth-card" onSubmit={submit}>
-      <div className="auth-card-heading"><span className="auth-icon"><UserRound size={18} /></span><div><h3>{mode === 'signin' ? 'Entra a tu cuenta' : 'Crea una cuenta'}</h3><p>Necesaria para enviar un puzle a revisión.</p></div></div>
+      <div className="auth-card-heading"><span className="auth-icon"><UserRound size={18} /></span><div><h3>{mode === 'signin' ? 'Entra a tu cuenta' : mode === 'signup' ? 'Crea una cuenta' : 'Recupera tu contraseña'}</h3><p>{mode === 'recover' ? 'Te enviaremos un enlace por correo.' : 'Necesaria para enviar un puzle a revisión.'}</p></div></div>
       <label className="form-field">Correo electrónico<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label>
-      <label className="form-field">Contraseña<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} minLength={8} required /></label>
+      {mode !== 'recover' && <label className="form-field">Contraseña<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} minLength={8} required /></label>}
       {error && <p className="field-error" role="alert">{error}</p>}
-      <button className="primary-button auth-submit" disabled={busy}>{busy ? 'Un momento…' : mode === 'signin' ? 'Iniciar sesión' : 'Crear cuenta'}</button>
-      <button type="button" className="text-button auth-switch" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); }}>
-        {mode === 'signin' ? '¿Primera vez? Crear cuenta' : 'Ya tengo una cuenta'}
+      {status && <p className="auth-status" role="status">{status}</p>}
+      <button className="primary-button auth-submit" disabled={busy}>{busy ? 'Un momento…' : mode === 'signin' ? 'Iniciar sesión' : mode === 'signup' ? 'Crear cuenta' : 'Enviar enlace'}</button>
+      <button type="button" className="text-button auth-switch" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); setStatus(''); }}>
+        {mode === 'signin' ? '¿Primera vez? Crear cuenta' : 'Volver a iniciar sesión'}
       </button>
+      {mode === 'signin' && <button type="button" className="text-button auth-switch" onClick={() => { setMode('recover'); setError(''); setStatus(''); }}>¿Olvidaste tu contraseña?</button>}
     </form>
   );
 }
@@ -617,8 +688,21 @@ function Game({ puzzle, imageUrl, referenceImageUrl, printPreviewUrl, saveStatus
   );
 }
 
+function RecoveryScreen({ user, onComplete, onCancel }) {
+  return (
+    <main className="recovery-main">
+      <div className="recovery-content">
+        <img className="brand-logo" src="/brand/puzlea-logo.png" alt="Puzlea" />
+        <h1>Vuelve a jugar<br /><span>con una clave nueva.</span></h1>
+        <p>Elige una contraseña para recuperar el acceso a tu cuenta.</p>
+        <PasswordUpdatePanel user={user} onComplete={onComplete} onCancel={onCancel} />
+      </div>
+    </main>
+  );
+}
+
 export default function App() {
-  const [page, setPage] = useState('home');
+  const [page, setPage] = useState(() => openingRecoveryLink() ? 'gallery' : 'home');
   const [image, setImage] = useState(null);
   const [game, setGame] = useState(null);
   const [level, setLevel] = useState(24);
@@ -631,6 +715,7 @@ export default function App() {
   const [notice, setNotice] = useState('');
   const [printPreviewUrl, setPrintPreviewUrl] = useState('');
   const [user, setUser] = useState(null);
+  const [recoveryMode, setRecoveryMode] = useState(openingRecoveryLink);
   const [saveStatus, setSaveStatus] = useState('saved');
   const deletedSessionIds = useRef(new Set());
   const latestGame = useRef(game);
@@ -656,9 +741,17 @@ export default function App() {
     let subscription;
     import('./lib/supabaseClient').then(({ supabase }) => {
       if (!active || !supabase) return;
-      supabase.auth.getSession().then(({ data }) => { if (active) setUser(data.session?.user ?? null); });
-      const result = supabase.auth.onAuthStateChange((_event, session) => { if (active) setUser(session?.user ?? null); });
+      const result = supabase.auth.onAuthStateChange((event, session) => {
+        if (!active) return;
+        setUser(session?.user ?? null);
+        if (event === 'PASSWORD_RECOVERY') {
+          setRecoveryMode(true);
+          setPage('gallery');
+        }
+        if (event === 'SIGNED_OUT') setRecoveryMode(false);
+      });
       subscription = result.data.subscription;
+      supabase.auth.getSession().then(({ data }) => { if (active) setUser(data.session?.user ?? null); });
     });
     return () => { active = false; subscription?.unsubscribe(); };
   }, []);
@@ -823,8 +916,10 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      {page !== 'game' && <Header page={page} setPage={setPage} user={user} onSignOut={signOut} onAccount={() => setPage('gallery')} />}
-      {page === 'game' && game ? (
+      {!recoveryMode && page !== 'game' && <Header page={page} setPage={setPage} user={user} onSignOut={signOut} onAccount={() => setPage('gallery')} />}
+      {recoveryMode ? (
+        <RecoveryScreen user={user} onComplete={() => { setRecoveryMode(false); setPage('gallery'); setNotice('Contraseña actualizada.'); }} onCancel={() => { setRecoveryMode(false); setPage('gallery'); }} />
+      ) : page === 'game' && game ? (
         <Game
           puzzle={game}
           imageUrl={gameImageUrl}
